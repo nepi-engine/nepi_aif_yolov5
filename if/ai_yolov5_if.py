@@ -4,8 +4,8 @@ import sys
 import os
 import os.path
 # ROS namespace setup for stand alone testing. Comment out for deployed version
-NEPI_BASE_NAMESPACE = '/nepi/s2x/'
-os.environ["ROS_NAMESPACE"] = NEPI_BASE_NAMESPACE[0:-1] # remove to run as automation script
+#NEPI_BASE_NAMESPACE = '/nepi/s2x/'
+#os.environ["ROS_NAMESPACE"] = NEPI_BASE_NAMESPACE[0:-1] # remove to run as automation script
 import rospy
 import glob
 import subprocess
@@ -27,29 +27,21 @@ from nepi_edge_sdk_base.save_cfg_if import SaveCfgIF
 
 
 AI_NAME = 'Yolov5' # Use in display menus
-FILE_TYPE = 'AIF'
-AI_DICT = dict(
-    description = 'Yolov5 ai framework support',
-    pkg_name = 'nepi_ai_yolov5',
-    class_name = 'Yolov5AIF',
-    node_file = 'nepi_ai_yolov5_node.py',
-    node_name = 'yolov5_ros',
-    launch_file = 'yolov5_ros.launch',
-    models_folder = 'yolov5_ros',
-    model_prefix = 'yolov5_',
-)
+FILE_TYPE = 'AIF_IF'
+
 
 TEST_AI_DICT = {'description': 'Yolov5 ai framework support', 
 'pkg_name': 'nepi_ai_yolov5', 
-'class_name': 'Yolov5AIF', 
-'node_file': 'nepi_ai_yolov5_node.py', 
-'node_name': 'ai_yolov5', 
-'launch_file': 'yolov5_ros.launch', 
-'models_folder': 'yolov5_ros', 
+'if_file_name': 'ai_yolov5_if.py', 
+'if_path_name': '/opt/nepi/ros/share/nepi_aifs', 
+'if_module_name': 'ai_yolov5_if', 
+'if_class_name': 'Yolov5AIF', 
+'models_folder_name': 'yolov5_ros', 
 'model_prefix': 'yolov5_', 
-'if_file': 'ai_yolov5_if.py', 
-'if_path': '/opt/nepi/ros/share/nepi_ai_ifs', 
-'module_name': 'ai_yolov5_if', 
+'launch_file_name': 'yolov5_ros.launch', 
+'node_file_name': 'nepi_ai_yolov5_node.py',  
+'node_name': 'ai_yolov5',
+
 'active': True
 }
 
@@ -76,9 +68,9 @@ class Yolov5AIF(object):
       self.models_lib_path = models_lib_path
       self.pkg_name = ai_dict['pkg_name']
       self.launch_node_name = ai_dict['node_name']
-      self.launch_file = ai_dict['launch_file']
+      self.launch_file = ai_dict['launch_file_name']
       self.model_prefix = ai_dict['model_prefix']
-      self.models_folder = ai_dict['models_folder']
+      self.models_folder = ai_dict['models_folder_name']
       self.models_folder_path =  os.path.join(self.models_lib_path, self.models_folder)
       nepi_msg.printMsgInfo("Yolov5 models path: " + self.models_folder_path)
       if run_test == True:
