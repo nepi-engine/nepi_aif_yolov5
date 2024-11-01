@@ -68,6 +68,7 @@ class Yolov5AIF(object):
       self.models_lib_path = models_lib_path
       self.pkg_name = ai_dict['pkg_name']
       self.launch_node_name = ai_dict['node_name']
+      self.launch_pkg = ai_dict['launch_pkg_name']
       self.launch_file = ai_dict['launch_file_name']
       self.model_prefix = ai_dict['model_prefix']
       self.models_folder = ai_dict['models_folder_name']
@@ -179,8 +180,8 @@ class Yolov5AIF(object):
 
         # Build Yolov5 new classifier launch command
         launch_cmd_line = [
-            "roslaunch", self.pkg_name, self.launch_file,
-            "pkg_name:=" + self.pkg_name,
+            "roslaunch", self.launch_pkg, self.launch_file,
+            "pkg_name:=" + self.launch_pkg,
             "model_name:=" + classifier,
             "pub_sub_namespace:=" + self.pub_sub_namespace, 
             "node_name:=" + self.launch_node_name,
