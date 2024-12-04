@@ -57,7 +57,7 @@ TEST_THRESHOLD = "0.3"
 
 
 class Yolov5AIF(object):
-    TYPICAL_LOAD_TIME_PER_MB = 2
+    TYPICAL_LOAD_TIME_PER_MB = 6
 
     yolov5_path = '/opt/nepi/ros/share/yolov5'
 
