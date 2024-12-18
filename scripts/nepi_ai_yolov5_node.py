@@ -61,6 +61,14 @@ class Yolov5Detector():
         except Exception as e:
             self.threshold = 0.5
             nepi_msg.publishMsgWarn(self,"Failed to convert threshold str " + threshold_str + " to float")
+        max_rate_str = nepi_ros.get_param(self,"~max_rate_hz","5.0")
+        try:
+            self.max_rate = float(max_rate_str)
+            nepi_msg.publishMsgWarn(self,"Starting with max rate " + str(self.max_rate))
+        except Exception as e:
+            self.max_rate = 1
+            nepi_msg.publishMsgWarn(self,"Failed to convert max rate str " + max_rate_str + " to float")
+
         if self.model_name == "":
             nepi_msg.publishMsgWarn(self,"Failed to get required node info from param server: ")
             rospy.signal_shutdown("Failed to get valid model info from param")
@@ -97,6 +105,8 @@ class Yolov5Detector():
                                     pub_sub_namespace = self.pub_sub_namespace,
                                     classes_list = self.classes,
                                     setThresholdFunction = self.setThreshold,
+                                    setMaxRateFunction = self.setMaxRate,
+                                    getMaxRateFunction = self.getMaxRate,
                                     processDetectionFunction = self.processDetection)
 
                 #########################################################
@@ -114,6 +124,12 @@ class Yolov5Detector():
 
     def setThreshold(self,threshold):
         self.threshold = threshold
+
+    def setMaxRate(self,rate):
+        self.max_rate = rate
+
+    def getMaxRate(self):
+        return self.max_rate
              
 
     def processDetection(self,cv2_img):

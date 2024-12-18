@@ -22,6 +22,7 @@
 
   <!-- Detection threshold -->
   <arg name="detection_threshold"        default="0.3"/>
+  <arg name="max_rate_hz"        default="5.0"/>
 
   <!-- Load parameters -->
   <rosparam command="load" ns="$(arg pub_sub_namespace)/$(arg node_name)" file="$(arg configs_path)/$(arg network_param_file)"/>
@@ -35,6 +36,7 @@
     <param name="configs_path"           value="$(arg configs_path)" />
     <param name="source_img_topic" value="$(arg source_img_topic)" />
     <param name="detection_threshold" value="$(arg detection_threshold)" />
+    <param name="max_rate_hz" value="$(arg max_rate_hz)" />
   </node>
 
 </launch>

@@ -49,15 +49,17 @@ TEST_PUB_SUB_NAMESPACE = "/nepi/s2x/ai_detector_mgr"
 
 TEST_MODELS_LIB_PATH = "/mnt/nepi_storage/ai_models/"
 
-TEST_CLASSIFIER = "common_object_detection_small"
+TEST_CLASSIFIER = "darknet_common_object_detection_small"
 
 TEST_IMAGE_TOPIC = "color_2d_image"
 
 TEST_THRESHOLD = "0.3"
 
+TEST_RATE = "1.0"
+
 
 class Yolov5AIF(object):
-    TYPICAL_LOAD_TIME_PER_MB = 6
+    TYPICAL_LOAD_TIME_PER_MB = 5
 
     yolov5_path = '/opt/nepi/ros/share/yolov5'
 
@@ -75,7 +77,7 @@ class Yolov5AIF(object):
       self.models_folder_path =  os.path.join(self.models_lib_path, self.models_folder)
       nepi_msg.printMsgInfo("Yolov5 models path: " + self.models_folder_path)
       if run_test == True:
-        self.startClassifier(TEST_CLASSIFIER, TEST_IMAGE_TOPIC, TEST_THRESHOLD)
+        self.startClassifier(TEST_CLASSIFIER, TEST_IMAGE_TOPIC, TEST_THRESHOLD, TEST_RATE)
     
     #################
     # Yolov5 Model Functions
@@ -149,7 +151,7 @@ class Yolov5AIF(object):
         return models_dict
 
 
-    def startClassifier(self, classifier, source_img_topic, threshold):
+    def startClassifier(self, classifier, source_img_topic, threshold, max_rate):
         source_img_topic = nepi_ros.find_topic(source_img_topic)
         if source_img_topic == "":
             nepi_msg.printMsgWarn("ai_yolov5_if: Failed to find image topic with str: " + source_img_topic)
@@ -177,7 +179,7 @@ class Yolov5AIF(object):
             nepi_msg.printMsgWarn("ai_yolov5_if: Failed to find network params file: " + network_param_file_path)
             return
 
-
+        
         # Build Yolov5 new classifier launch command
         launch_cmd_line = [
             "roslaunch", self.launch_pkg, self.launch_file,
@@ -191,7 +193,8 @@ class Yolov5AIF(object):
             "configs_path:=" + configs_path,
             "network_param_file:=" + network_param_file,
             "source_img_topic:=" + source_img_topic,
-            "detector_threshold:=" + str(threshold)
+            "detector_threshold:=" + str(threshold),
+            "max_rate_hz:=" + str(max_rate)
         ]
         nepi_msg.printMsgInfo("ai_yolov5_if: Launching Yolov5 ROS Process: " + str(launch_cmd_line))
         self.ros_process = subprocess.Popen(launch_cmd_line)
