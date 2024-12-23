@@ -38,6 +38,7 @@ TEST_AI_DICT = {'description': 'Yolov5 ai framework support',
 'if_class_name': 'Yolov5AIF', 
 'models_folder_name': 'yolov5_ros', 
 'model_prefix': 'yolov5_', 
+'launch_pkg_name': 'nepi_ai_yolov5',
 'launch_file_name': 'yolov5_ros.launch', 
 'node_file_name': 'nepi_ai_yolov5_node.py',  
 'node_name': 'ai_yolov5',
@@ -49,7 +50,7 @@ TEST_PUB_SUB_NAMESPACE = "/nepi/s2x/ai_detector_mgr"
 
 TEST_MODELS_LIB_PATH = "/mnt/nepi_storage/ai_models/"
 
-TEST_CLASSIFIER = "darknet_common_object_detection_small"
+TEST_CLASSIFIER = "common_object_detection_small"
 
 TEST_IMAGE_TOPIC = "color_2d_image"
 
