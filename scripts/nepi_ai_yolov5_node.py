@@ -27,11 +27,11 @@ import numpy as np
 np.bool = np.bool_
 import pandas
 
-from nepi_edge_sdk_base import nepi_ros
-from nepi_edge_sdk_base import nepi_msg
-from nepi_edge_sdk_base import nepi_ais
+from nepi_sdk import nepi_ros
+from nepi_sdk import nepi_msg
+from nepi_sdk import nepi_ais
 
-from nepi_edge_sdk_base.ai_node_if import AiNodeIF
+from nepi_sdk.ai_node_if import AiNodeIF
 
 # Define your PyTorch model and load the weights
 # model = ...
