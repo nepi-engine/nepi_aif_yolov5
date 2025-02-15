@@ -1,0 +1,11 @@
+description: Yolov5 ai framework support
+pkg_name: nepi_aif_yolov5
+if_file_name: aif_yolov5_if.py
+if_module_name: aif_yolov5_if
+if_class_name: Yolov5AIF
+node_file_name: nepi_ai_yolov5_node.py
+launch_pkg_name: nepi_aif_yolov5
+launch_file_name: yolov5_ros.launch
+models_folder_name: yolov5
+model_prefix: yolov5_
+supports_preload: True

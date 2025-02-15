@@ -2,41 +2,30 @@
 
 <launch>
   <!-- Console launch prefix -->
-  <arg name="pkg_name" default="nepi_ai_yolo5"/>
-  <arg name="model_name" default="common_object_detection_small"/>
-  <arg name="node_name" default="ai_yolov5"/>
+  <arg name="pkg_name" default="nepi_aif_yolo5"/>
+  <arg name="node_name" default="ai_yolov5_common_object_detection_small"/>
+  <arg name="node_namespace" default="/nepi" />
   <arg name="node_file" default="nepi_ai_yolov5_node.py"/>
   <arg name="launch_prefix" default=""/>
-  <arg name="pub_sub_namespace" default="/nepi/" />
+  <arg name="mgr_namespace" default="/nepi/ai_detector_mgr" />
 
   <!-- Set paths. -->
   <arg name="yolov5_path"          default="/opt/nepi/ros/share/yolov5"/>
-  <arg name="weights_path"          default="/mnt/nepi_storage/ai_models/yolov5_ros/weights"/>
-  <arg name="configs_path"           default="/mnt/nepi_storage/ai_models/yolov5_ros/configs"/>
+  <arg name="weights_path"          default="/mnt/nepi_storage/ai_models/yolov5/weights"/>
+  <arg name="configs_path"           default="/mnt/nepi_storage/ai_models/yolov5/configs"/>
 
   <!-- network parameter files -->
   <arg name="network_param_file"         default="common_object_detection_small.yaml"/>
 
-  <!-- Input image -->
-  <arg name="source_img_topic"                  default="$(arg pub_sub_namespace)/image_raw"/>
-
-  <!-- Detection threshold -->
-  <arg name="detection_threshold"        default="0.3"/>
-  <arg name="max_rate_hz"        default="5.0"/>
-
   <!-- Load parameters -->
-  <rosparam command="load" ns="$(arg pub_sub_namespace)/$(arg node_name)" file="$(arg configs_path)/$(arg network_param_file)"/>
+  <rosparam command="load" ns="$(arg node_namespace)/$(arg node_name)" file="$(arg configs_path)/$(arg network_param_file)"/>
 
   <!-- Start yolov5 and ros wrapper -->
-  <node pkg="$(arg pkg_name)" ns="$(arg pub_sub_namespace)" type="$(arg node_file)" name="$(arg node_name)" output="screen" launch-prefix="$(arg launch_prefix)">
-    <param name="pub_sub_namespace"   value="$(arg pub_sub_namespace)" />
-    <param name="model_name"          value="$(arg model_name)" />
+  <node pkg="$(arg pkg_name)" ns="$(arg node_namespace)" type="$(arg node_file)" name="$(arg node_name)" output="screen" launch-prefix="$(arg launch_prefix)">
     <param name="yolov5_path"          value="$(arg yolov5_path)" />
     <param name="weights_path"          value="$(arg weights_path)" />
     <param name="configs_path"           value="$(arg configs_path)" />
-    <param name="source_img_topic" value="$(arg source_img_topic)" />
-    <param name="detection_threshold" value="$(arg detection_threshold)" />
-    <param name="max_rate_hz" value="$(arg max_rate_hz)" />
+    <param name="mgr_namespace"   value="$(arg mgr_namespace)" />
   </node>
 
 </launch>

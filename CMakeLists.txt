@@ -7,7 +7,7 @@ This file is part of nepi-engine
 License: 3-clause BSD, see https://opensource.org/licenses/BSD-3-Clause
 ]]
 cmake_minimum_required(VERSION 1.0.0)
-project(nepi_ai_yolov5)
+project(nepi_aif_yolov5)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)

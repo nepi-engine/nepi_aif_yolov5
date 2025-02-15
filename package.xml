@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>nepi_ai_yolov5</name>
+  <name>nepi_aif_yolov5</name>
   <version>0.0.0</version>
   <description>Files for nepi yolov5 ai framework support</description>
 
