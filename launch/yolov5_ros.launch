@@ -2,29 +2,25 @@
 
 <launch>
   <!-- Console launch prefix -->
-  <arg name="pkg_name" default="nepi_aif_yolo5"/>
-  <arg name="node_name" default="ai_yolov5_common_object_detection_small"/>
+  <arg name="pkg_name" default="nepi_aif_yolo3"/>
+  <arg name="node_name" default="darknet_common_object_detection_small"/>
   <arg name="node_namespace" default="/nepi" />
-  <arg name="node_file" default="nepi_ai_yolov5_node.py"/>
+  <arg name="node_file" default="nepi_ai_darknet_node.py"/>
   <arg name="launch_prefix" default=""/>
-  <arg name="mgr_namespace" default="/nepi/ai_detector_mgr" />
+  <arg name="mgr_namespace" default="" />
 
   <!-- Set paths. -->
   <arg name="yolov5_path"          default="/opt/nepi/ros/share/yolov5"/>
-  <arg name="weights_path"          default="/mnt/nepi_storage/ai_models/yolov5/weights"/>
-  <arg name="configs_path"           default="/mnt/nepi_storage/ai_models/yolov5/configs"/>
-
-  <!-- network parameter files -->
-  <arg name="network_param_file"         default="common_object_detection_small.yaml"/>
+  <arg name="param_file_path"          default="/mnt/nepi_storage/ai_models/darknet/common_object_detection.yaml"/>
+  <arg name="weight_file_path"          default=""/>
 
   <!-- Load parameters -->
-  <rosparam command="load" ns="$(arg node_namespace)/$(arg node_name)" file="$(arg configs_path)/$(arg network_param_file)"/>
+  <rosparam command="load" ns="$(arg node_namespace)/$(arg node_name)" file="$(param_file_path)"/>
 
-  <!-- Start yolov5 and ros wrapper -->
+  <!-- Start darknet and ros wrapper -->
   <node pkg="$(arg pkg_name)" ns="$(arg node_namespace)" type="$(arg node_file)" name="$(arg node_name)" output="screen" launch-prefix="$(arg launch_prefix)">
     <param name="yolov5_path"          value="$(arg yolov5_path)" />
-    <param name="weights_path"          value="$(arg weights_path)" />
-    <param name="configs_path"           value="$(arg configs_path)" />
+    <param name="weight_file_path"          value="$(arg weight_file_path)" />
     <param name="mgr_namespace"   value="$(arg mgr_namespace)" />
   </node>
 

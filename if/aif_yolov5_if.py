@@ -37,6 +37,8 @@ from nepi_sdk import nepi_msg
 
 from std_msgs.msg import Empty, Float32, Int32, String, Bool
 
+from nepi_ros_interfaces.srv import SetBoolState, SetBoolStateRequest
+
 from nepi_sdk.save_cfg_if import SaveCfgIF
 
 
@@ -139,10 +141,10 @@ class Yolov5AIF(object):
                     nepi_msg.printMsgWarn("ai_yolov5_if: File does not appear to be a valid A/I model config file: " + f + "... not adding this model")
                     continue
 
-                config_file = os.path.basename(f)
+                param_file = os.path.basename(f)
                 weight_file = cfg_dict[model_key]["weight_file"]["name"]
                 weigth_file_path = os.path.join(self.models_folder_path,weight_file)
-                model_name = self.model_prefix + os.path.splitext(config_file)[0]
+                model_name = self.model_prefix + os.path.splitext(param_file)[0]
                 #nepi_msg.printMsgWarn("ai_yolov5_if: Checking that model weigths file exists: " + weigth_file_path + " for model name " + model_name)
                 if not os.path.exists(weigth_file_path):
                     nepi_msg.printMsgWarn("ai_yolov5_if: Classifier " + model_name + " specifies non-existent weights file " + weigth_file_path + "... not adding this model")
@@ -150,7 +152,8 @@ class Yolov5AIF(object):
                 model_size = os.path.getsize(weigth_file_path)
                 model_dict = dict()
                 model_dict['model_name'] = model_name
-                model_dict['config_file'] = config_file
+                model_dict['model_path'] = self.models_folder_path
+                model_dict['param_file'] = param_file
                 model_dict['weight_file']= weight_file
                 model_dict['size'] = model_size
                 model_dict['load_time'] = self.TYPICAL_LOAD_TIME_PER_MB * model_size / 1000000
@@ -163,33 +166,10 @@ class Yolov5AIF(object):
 
     def loadClassifier(self, model_dict):
         success = False
-        node_namespace = ""
-        # Check for yolo support files
-        if os.path.exists(self.yolov5_path) == False:
-            nepi_msg.printMsgWarn("ai_yolov5_if: Failed to find yolov5 model path: " + self.yolov5_path)
-            return success, node_namespace
-
-        # Check for files
-        weights_path = self.models_folder_path
-        if os.path.exists(weights_path) == False:
-            nepi_msg.printMsgWarn("ai_yolov5_if: Failed to find weights path: " + weights_path)
-            return success, node_namespace
-
-        configs_path = self.models_folder_path
-        if os.path.exists(configs_path) == False:
-            nepi_msg.printMsgWarn("ai_yolov5_if: Failed to find configs path: " + configs_path)
-            return success, node_namespace
-
-        config_file = model_dict['config_file']
-        network_param_file_path = os.path.join(configs_path, config_file)
-        if os.path.exists(network_param_file_path) == False:
-            nepi_msg.printMsgWarn("ai_yolov5_if: Failed to find network params file: " + network_param_file_path)
-            return success, node_namespace
-
         model_name = model_dict['model_name']
         node_name = model_name
         node_namespace = os.path.join(self.launch_namespace, node_name)
-        # Build Yolov5 new model_name launch command
+        # Build Darknet new model_name launch command
         launch_cmd_line = [
             "roslaunch", self.launch_pkg, self.launch_file,
             "pkg_name:=" + self.launch_pkg,
@@ -197,18 +177,16 @@ class Yolov5AIF(object):
             "node_namespace:=" + self.launch_namespace,
             "mgr_namespace:=" + self.mgr_namespace, 
             "yolov5_path:=" + self.yolov5_path,
-            "weights_path:=" + weights_path,
-            "configs_path:=" + configs_path,
-            "network_param_file:=" + config_file
+            "param_file_path:=" + os.path.join(model_dict['model_path'],model_dict['param_file']),
+            "weight_file_path:=" + os.path.join(model_dict['model_path'],model_dict['weight_file'])
         ]
         nepi_msg.printMsgInfo("ai_yolov5_if: Launching Yolov5 AI node " + model_name + " with commands: " + str(launch_cmd_line))
         node_process = subprocess.Popen(launch_cmd_line)
-        node_enable_topic = os.path.join(node_namespace,'set_enable')
-        node_enable_pub = rospy.Publisher(node_enable_topic, Bool,  queue_size = 1)
-        self.ai_node_dict[model_name] = {'namesapce':node_namespace, 'enable_pub': node_enable_pub, 'process':node_process}
-        
-
-        return True, node_namespace
+        node_enable_srv_namespace = os.path.join(node_namespace,'set_enable')
+        set_enable_service = rospy.ServiceProxy(node_enable_srv_namespace, SetBoolState)
+        self.ai_node_dict[model_name] = {'namesapce':node_namespace, 'enable_srv': set_enable_service, 'process':node_process}
+        success = True
+        return success, node_namespace
 
 
     def killClassifier(self,model_name):
@@ -223,10 +201,22 @@ class Yolov5AIF(object):
 
     def enableClassifier(self, model_name, val):
         if model_name in self.ai_node_dict.keys():
-            node_enable_pub = self.ai_node_dict[model_name]['enable_pub']
+            nepi_msg.printMsgInfo("ai_yolov5_if: Sending enable service request to model " + model_name)
+            set_enable_service = self.ai_node_dict[model_name]['enable_srv']
             #nepi_msg.printMsgInfo("ai_yolov5_if: Setting Yolov5 AI node " + model_name + " enbable to: " + str(val))
+            success = False
             if not rospy.is_shutdown():
-                node_enable_pub.publish(val)
+                try:
+                    req = SetBoolStateRequest()
+                    req.req_state = val
+                    set_enable_response = set_enable_service(req)
+                    enabled = set_enable_response.resp_state
+                    if enabled == val:
+                        success = True
+                except Exception as e:
+                    nepi_msg.printMsgWarn("ai_yolov5_if: Failed to call enable request for model " + model_name + " " + str(e))
+        return success
+
         
    
 

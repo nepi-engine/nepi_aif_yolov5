@@ -72,10 +72,10 @@ class Yolov5Detector():
         node_params = nepi_ros.get_param(self,"~")
         nepi_msg.publishMsgInfo(self,"Starting node params: " + str(node_params))
         self.mgr_namespace = nepi_ros.get_param(self,"~mgr_namespace","")
-        self.yolov5_path = nepi_ros.get_param(self,"~yolov5_path","")
-        self.weights_path = nepi_ros.get_param(self,"~weights_path","")
-
-        if self.mgr_namespace == "" or self.yolov5_path == "" or self.weights_path == "":
+        if self.mgr_namespace == "":
+            self.mgr_namespace = self.node_namespace
+        self.weight_file_path = nepi_ros.get_param(self,"~weight_file_path","")
+        if self.weight_file_path == "":
             nepi_msg.publishMsgWarn(self,"Failed to get required node info from param server: ")
             rospy.signal_shutdown("Failed to get valid model info from param")
         else:
@@ -85,8 +85,6 @@ class Yolov5Detector():
                 nepi_msg.publishMsgWarn(self,"Failed to get required model info from params: ")
                 rospy.signal_shutdown("Failed to get valid model file paths")
             else:
-
-                self.weight_file_path = os.path.join(self.weights_path, model_info['weight_file']['name'])
                 self.classes = model_info['detection_classes']['names']
 
                 raw_yolov5_path = r"{}".format(self.yolov5_path)
