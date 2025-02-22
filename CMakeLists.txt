@@ -88,7 +88,7 @@ catkin_package(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
  catkin_install_python(PROGRAMS
-   scripts/nepi_ai_yolov5_node.py
+   scripts/nepi_ai_yolov5_detection_node.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 

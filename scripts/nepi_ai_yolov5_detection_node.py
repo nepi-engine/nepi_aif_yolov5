@@ -17,6 +17,7 @@
 #
 
 import os
+import time
 import copy
 import sys
 import rospy
@@ -31,7 +32,7 @@ from nepi_sdk import nepi_ros
 from nepi_sdk import nepi_msg
 from nepi_sdk import nepi_ais
 
-from nepi_sdk.ai_node_if import AiNodeIF
+from nepi_sdk.ai_detector_if import AiDetectorIF
 
 # Define your PyTorch model and load the weights
 # model = ...
@@ -56,6 +57,7 @@ TEST_DETECTION_DICT_ENTRY = {
 
 class Yolov5Detector():
     defualt_config_dict = {'threshold': 0.3,'max_rate': 5}
+
     #######################
     ### Node Initialization
     DEFAULT_NODE_NAME = "ai_yolov5" # Can be overwitten by luanch command
@@ -71,11 +73,12 @@ class Yolov5Detector():
         # Initialize parameters and fields.
         node_params = nepi_ros.get_param(self,"~")
         nepi_msg.publishMsgInfo(self,"Starting node params: " + str(node_params))
-        self.mgr_namespace = nepi_ros.get_param(self,"~mgr_namespace","")
-        if self.mgr_namespace == "":
-            self.mgr_namespace = self.node_namespace
+        self.all_namespace = nepi_ros.get_param(self,"~all_namespace","")
+        if self.all_namespace == "":
+            self.all_namespace = self.node_namespace
         self.weight_file_path = nepi_ros.get_param(self,"~weight_file_path","")
-        if self.weight_file_path == "":
+        self.yolov5_path = nepi_ros.get_param(self,"~yolov5_path","")
+        if self.weight_file_path == "" or self.yolov5_path == "":
             nepi_msg.publishMsgWarn(self,"Failed to get required node info from param server: ")
             rospy.signal_shutdown("Failed to get valid model info from param")
         else:
@@ -85,16 +88,34 @@ class Yolov5Detector():
                 nepi_msg.publishMsgWarn(self,"Failed to get required model info from params: ")
                 rospy.signal_shutdown("Failed to get valid model file paths")
             else:
-                self.classes = model_info['detection_classes']['names']
+                try: 
+                    model_type = model_info['type']['name']
+                    model_description = model_info['description']['name']
+                    self.classes = model_info['classes']['names']
+                    self.img_width = model_info['image_size']['image_width']['value']
+                    self.img_height = model_info['image_size']['image_height']['value']
+                except Exception as e:
+                    nepi_msg.publishMsgWarn(self,"Failed to get required model info from params: " + str(e))
+                    rospy.signal_shutdown("Failed to get valid model file paths")
 
-                raw_yolov5_path = r"{}".format(self.yolov5_path)
-                self.model = torch.hub.load(raw_yolov5_path,'custom', path=self.weight_file_path,source='local')
+                if model_type != 'yolov5':
+                    nepi_msg.publishMsgWarn(self,"Model not a valid type: " + model_type)
+                    rospy.signal_shutdown("Model not a valid type")
 
-                #nepi_msg.publishMsgWarn(self,"Starting ai_if with defualt_config_dict: " + str(self.defualt_config_dict))
-                self.ai_if = AiNodeIF(model_name = self.node_name,
-                                    mgr_namespace = self.mgr_namespace,
+                nepi_msg.publishMsgInfo(self,"Loading model: " + self.node_name)
+                self.model = darknet.load_network(self.config_file_path, self.weight_file_path)
+
+                #nepi_msg.publishMsgInfo(self,"Waiting " + str(800) + " seconds for model to load")
+                #nepi_ros.sleep(800)
+
+                nepi_msg.publishMsgInfo(self,"Starting ai_if with defualt_config_dict: " + str(self.defualt_config_dict))
+                self.ai_if = AiDetectorIF(model_name = self.node_name,
+                                    model_description = model_description
+                                    img_height_px = self.img_height,
+                                    img_width_px = self.img_width,
                                     classes_list = self.classes,
                                     defualt_config_dict = self.defualt_config_dict,
+                                    all_namespace = self.all_namespace,
                                     processDetectionFunction = self.processDetection)
 
                 #########################################################

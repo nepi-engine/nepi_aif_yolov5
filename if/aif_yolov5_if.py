@@ -37,8 +37,6 @@ from nepi_sdk import nepi_msg
 
 from std_msgs.msg import Empty, Float32, Int32, String, Bool
 
-from nepi_ros_interfaces.srv import SetBoolState, SetBoolStateRequest
-
 from nepi_sdk.save_cfg_if import SaveCfgIF
 
 
@@ -50,10 +48,10 @@ TEST_AI_DICT = {
 'if_module_name': 'aif_yolov5_if', 
 'if_class_name': 'Yolov5AIF', 
 'models_folder_name': 'yolov5', 
-'model_prefix': 'ai_yolov5_', 
-'launch_pkg_name': 'nepi_ai_yolov5',
+'model_prefix': 'yolov5_', 
+'launch_pkg_name': 'nepi_aif_yolov5',
 'launch_file_name': 'yolov5_ros.launch', 
-'node_file_name': 'nepi_ai_yolov5_node.py',  
+'node_file_name': 'nepi_ai_yolov5_detection_node.py',  
 'active': True
 }
 
@@ -80,7 +78,7 @@ class Yolov5AIF(object):
       self.mgr_namespace = mgr_namespace
       self.models_lib_path = models_lib_path
       self.pkg_name = ai_dict['pkg_name']
-
+      self.node_file_dict = ai_dict['node_file_dict']
       self.launch_pkg = ai_dict['launch_pkg_name']
       self.launch_file = ai_dict['launch_file_name']
       self.model_prefix = ai_dict['model_prefix']
@@ -137,34 +135,67 @@ class Yolov5AIF(object):
                 #nepi_msg.printMsgWarn("ai_yolov5_if: Import success: " + str(success) + " with cfg_dict " + str(cfg_dict))
                 cfg_dict_keys = cfg_dict[model_key].keys()
                 #nepi_msg.printMsgWarn("ai_yolov5_if: Imported model key names: " + str(cfg_dict_keys))
+                #nepi_msg.printMsgWarn("ai_yolov3_if: Imported model key names: " + str(cfg_dict_keys))
+                if ("framework" not in cfg_dict_keys):
+                    nepi_msg.printMsgWarn("ai_yolov5_if: Framework does not specified in model yaml file: " + f + "... not adding this model")
+                    continue
                 if ("weight_file" not in cfg_dict_keys):
                     nepi_msg.printMsgWarn("ai_yolov5_if: File does not appear to be a valid A/I model config file: " + f + "... not adding this model")
                     continue
+                #nepi_msg.printMsgWarn("ai_yolov3_if: Imported model key names: " + str(cfg_dict_keys))
+                if ("image_size" not in cfg_dict_keys):
+                    nepi_msg.printMsgWarn("ai_yolov3_if: File does not specify a image size: " + f + "... not adding this model")
+                    continue
+                #nepi_msg.printMsgWarn("ai_yolov3_if: Imported model key names: " + str(cfg_dict_keys))
+                if ("classes" not in cfg_dict_keys):
+                    nepi_msg.printMsgWarn("ai_yolov3_if: File does not specify a classes: " + f + "... not adding this model")
+                    continue
 
                 param_file = os.path.basename(f)
-                weight_file = cfg_dict[model_key]["weight_file"]["name"]
-                weigth_file_path = os.path.join(self.models_folder_path,weight_file)
+                framework = cfg_dict[model_key]["framework"]["name"]
                 model_name = self.model_prefix + os.path.splitext(param_file)[0]
-                #nepi_msg.printMsgWarn("ai_yolov5_if: Checking that model weigths file exists: " + weigth_file_path + " for model name " + model_name)
-                if not os.path.exists(weigth_file_path):
-                    nepi_msg.printMsgWarn("ai_yolov5_if: Classifier " + model_name + " specifies non-existent weights file " + weigth_file_path + "... not adding this model")
+
+                
+                if framework != 'yolov5':
+                    nepi_msg.printMsgWarn("ai_yolov5_if: Model " + model_name + " not a yolov3 model" + framework + "... not adding this model")
                     continue
-                model_size = os.path.getsize(weigth_file_path)
+
+
+
+                #nepi_msg.printMsgWarn("ai_yolov5_if: Checking that model weights file exists: " + weight_file_path + " for model name " + model_name)
+                weight_file = cfg_dict[model_key]["weight_file"]["name"]
+                weight_file_path = os.path.join(self.models_folder_path,weight_file)
+                if not os.path.exists(weight_file_path):
+                    nepi_msg.printMsgWarn("ai_yolov5_if: Model " + model_name + " specifies non-existent weights file " + weight_file_path + "... not adding this model")
+                    continue
+                model_type = cfg_dict[model_key]['type']['name']
+                if model_type not in self.node_file_dict.keys():
+                    nepi_msg.printMsgWarn("ai_yolov5_if: Model " + model_name + " specifies non-supported model type " + model_type + "... not adding this model")
+                    continue
+                else:
+                    node_file_name = self.node_file_dict[model_type]
+                model_size = os.path.getsize(weight_file_path)
                 model_dict = dict()
+                model_dict['param_file'] = param_file
+                model_dict['framework'] = framework
                 model_dict['model_name'] = model_name
                 model_dict['model_path'] = self.models_folder_path
-                model_dict['param_file'] = param_file
+                model_dict['type'] = model_type
+                model_dict['description'] = cfg_dict[model_key]['description']['name']
+                model_dict['img_height'] = cfg_dict[model_key]['image_size']['image_height']['value']
+                model_dict['img_width'] = cfg_dict[model_key]['image_size']['image_width']['value']
+                model_dict['classes'] = cfg_dict[model_key]['classes']['names']
                 model_dict['weight_file']= weight_file
+                model_dict['node_file_name'] = node_file_name
                 model_dict['size'] = model_size
                 model_dict['load_time'] = self.TYPICAL_LOAD_TIME_PER_MB * model_size / 1000000
-                model_dict['classes'] = cfg_dict[model_key]['detection_classes']['names']
                 nepi_msg.printMsgInfo("ai_yolov5_if: Model dict create for model : " + model_name)
                 models_dict[model_name] = model_dict
-            #nepi_msg.printMsgWarn("Classifier returning models dict" + str(models_dict))
+            #nepi_msg.printMsgWarn("Model returning models dict" + str(models_dict))
         return models_dict
 
 
-    def loadClassifier(self, model_dict):
+    def loadModel(self, model_dict):
         success = False
         model_name = model_dict['model_name']
         node_name = model_name
@@ -175,6 +206,7 @@ class Yolov5AIF(object):
             "pkg_name:=" + self.launch_pkg,
             "node_name:=" + node_name,
             "node_namespace:=" + self.launch_namespace,
+            "node_file_name:=" + model_dict['node_file_name'],
             "mgr_namespace:=" + self.mgr_namespace, 
             "yolov5_path:=" + self.yolov5_path,
             "param_file_path:=" + os.path.join(model_dict['model_path'],model_dict['param_file']),
@@ -182,42 +214,21 @@ class Yolov5AIF(object):
         ]
         nepi_msg.printMsgInfo("ai_yolov5_if: Launching Yolov5 AI node " + model_name + " with commands: " + str(launch_cmd_line))
         node_process = subprocess.Popen(launch_cmd_line)
-        node_enable_srv_namespace = os.path.join(node_namespace,'set_enable')
-        set_enable_service = rospy.ServiceProxy(node_enable_srv_namespace, SetBoolState)
-        self.ai_node_dict[model_name] = {'namesapce':node_namespace, 'enable_srv': set_enable_service, 'process':node_process}
+        self.ai_node_dict[model_name] = {'namesapce':node_namespace, 'process':node_process}
         success = True
         return success, node_namespace
 
 
-    def killClassifier(self,model_name):
+    def killModel(self,model_name):
         if model_name in self.ai_node_dict.keys():
-            node_process = self.ai_node_dict[model_name]['proceess']
+            node_process = self.ai_node_dict[model_name]['process']
             nepi_msg.printMsgInfo("ai_yolov5_if: Killing Yolov5 AI node: " + model_name)
-            if not (None == self.node_process):
-                self.node_process.terminate()
+            if not (None == node_process):
+                node_process.terminate()
             del self.ai_node_dict[model_name]
 
 
-
-    def enableClassifier(self, model_name, val):
-        if model_name in self.ai_node_dict.keys():
-            nepi_msg.printMsgInfo("ai_yolov5_if: Sending enable service request to model " + model_name)
-            set_enable_service = self.ai_node_dict[model_name]['enable_srv']
-            #nepi_msg.printMsgInfo("ai_yolov5_if: Setting Yolov5 AI node " + model_name + " enbable to: " + str(val))
-            success = False
-            if not rospy.is_shutdown():
-                try:
-                    req = SetBoolStateRequest()
-                    req.req_state = val
-                    set_enable_response = set_enable_service(req)
-                    enabled = set_enable_response.resp_state
-                    if enabled == val:
-                        success = True
-                except Exception as e:
-                    nepi_msg.printMsgWarn("ai_yolov5_if: Failed to call enable request for model " + model_name + " " + str(e))
-        return success
-
-        
+ 
    
 
 if __name__ == '__main__':
