@@ -43,13 +43,13 @@ TEST_DETECTION_DICT_ENTRY = {
     'id': 1, # Class Index from Classes List
     'uid': '', # Reserved for unique tracking by downstream applications
     'prob': .3, # Probability of detection
-    'xmin': 100,
-    'ymin': 100,
-    'xmax': 500,
-    'ymax': 500,
-    'width_pixels': 1000,
-    'height_pixels': 700,
-    'area_pixels': 160000,
+    'xmin': 10,
+    'ymin': 10,
+    'xmax': 50,
+    'ymax': 50,
+    'width_pixels': 40,
+    'height_pixels': 40,
+    'area_pixels': 16000,
     'area_ratio': 0.22857
 }
 
@@ -108,15 +108,15 @@ class Yolov5Detector():
                     nepi_msg.publishMsgWarn(self,"Model not a valid type: " + model_type)
                     rospy.signal_shutdown("Model not a valid type")
 
-                nepi_msg.publishMsgInfo(self,"Loading model: " + self.node_name)
-                self.model = darknet.load_network(self.config_file_path, self.weight_file_path)
+                self.classes = model_info['detection_classes']['names']
 
-                #nepi_msg.publishMsgInfo(self,"Waiting " + str(800) + " seconds for model to load")
-                #nepi_ros.sleep(800)
+                raw_yolov5_path = r"{}".format(self.yolov5_path)
+                self.model = torch.hub.load(raw_yolov5_path,'custom', path=self.weight_file_path,source='local')
 
                 nepi_msg.publishMsgInfo(self,"Starting ai_if with defualt_config_dict: " + str(self.defualt_config_dict))
                 self.ai_if = AiDetectorIF(model_name = self.node_name,
-                                    model_description = model_description,
+                                    framework = model_framework,
+                                    description = model_description,
                                     img_height = self.img_height,
                                     img_width = self.img_width,
                                     classes_list = self.classes,

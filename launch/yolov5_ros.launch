@@ -2,7 +2,7 @@
 
 <launch>
   <!-- Console launch prefix -->
-  <arg name="pkg_name" default="nepi_aif_yolo3"/>
+  <arg name="pkg_name" default="nepi_aif_yolov5"/>
   <arg name="node_name" default="yolov5_common_object_detection"/>
   <arg name="node_namespace" default="/nepi" />
   <arg name="node_file_name" default=""/>
