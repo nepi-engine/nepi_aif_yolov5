@@ -108,7 +108,7 @@ class Yolov5Detector():
                     nepi_msg.publishMsgWarn(self,"Model not a valid type: " + model_type)
                     rospy.signal_shutdown("Model not a valid type")
 
-                self.classes = model_info['detection_classes']['names']
+                self.classes = model_info['classes']['names']
 
                 raw_yolov5_path = r"{}".format(self.yolov5_path)
                 self.model = torch.hub.load(raw_yolov5_path,'custom', path=self.weight_file_path,source='local')
@@ -135,6 +135,7 @@ class Yolov5Detector():
 
 
     def processDetection(self,cv2_img, threshold):
+        start_time = time.time()
         detect_dict_list = [TEST_DETECTION_DICT_ENTRY]
         # Example image
         #img = 'https://ultralytics.com/images/zidane.jpg'
@@ -171,6 +172,8 @@ class Yolov5Detector():
             # 3  986.00  304.00  1028.0  420.0    0.286865     27     tie
         except Exception as e:
             nepi_msg.publishMsgInfo(self,"Failed to process img with exception: " + str(e))
+        detect_time = round( (time.time() - start_time) , 3)
+        #nepi_msg.publishMsgInfo(self,"Detect Time: {:.2f}".format(detect_time))
         detect_dict_list = []
         for i, name in enumerate(rp['name']):
             detect_box_area = ( int(rp['xmax'][i]) - int(rp['xmin'][i]) ) * ( int(rp['ymax'][i]) - int(rp['ymin'][i]) )
@@ -187,12 +190,13 @@ class Yolov5Detector():
                 'width_pixels': cv2_img_width,
                 'height_pixels': cv2_img_height,
                 'area_pixels': detect_box_area,
-                'area_ratio': detect_box_ratio,
+                'area_ratio': detect_box_ratio
             }
             detect_dict_list.append(detect_dict)
             #nepi_msg.publishMsgInfo(self,"Got detect dict entry: " + str(detect_dict))
-
-        return detect_dict_list
+        detect_time = round( (time.time() - start_time) , 3)
+        #nepi_msg.publishMsgInfo(self,"Detect Time: {:.2f}".format(detect_time))
+        return detect_dict_list, detect_time
 
 
 
