@@ -22,6 +22,7 @@ import copy
 import sys
 import rospy
 import torch
+torch.set_num_threads(3)
 import cv2
 import torchvision.transforms as transforms
 import numpy as np
@@ -30,7 +31,7 @@ import pandas
 
 from nepi_sdk import nepi_ros
 from nepi_sdk import nepi_msg
-from nepi_sdk import nepi_ais
+from nepi_sdk import nepi_img
 
 from nepi_sdk.ai_detector_if import AiDetectorIF
 
@@ -70,6 +71,15 @@ class Yolov5Detector():
         nepi_msg.createMsgPublishers(self)
         nepi_msg.publishMsgInfo(self,"Starting Initialization Processes")
         ##############################
+
+        if torch.cuda.is_available():
+            device = torch.device('cuda')
+            nepi_msg.publishMsgWarn(self,'GPU is available. Using device: ' + str(device))
+        else:
+            device = torch.device('cpu')
+            nepi_msg.publishMsgWarn(self,'GPU not available, using CPU instead.')
+
+
         # Initialize parameters and fields.
         node_params = nepi_ros.get_param(self,"~")
         nepi_msg.publishMsgInfo(self,"Starting node params: " + str(node_params))
@@ -144,9 +154,10 @@ class Yolov5Detector():
         if 'tile'  in options_dict.keys():
             tile = options_dict['tile']
         '''
+        cv2_img = nepi_img.resize_proportionally(cv2_img, self.proc_img_width,self.proc_img_height,interp = cv2.INTER_NEAREST)
         
         # Convert BW image to RGB
-        if cv2_img.shape[2] != 3:
+        if nepi_img.is_gray(cv2_img):
             cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_GRAY2BGR)
 
         #nepi_msg.publishMsgInfo(self,":yolov5: Preprocessed image with image size: " + str(cv2_img.shape))
