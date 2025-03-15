@@ -32,27 +32,12 @@ import pandas
 from nepi_sdk import nepi_ros
 from nepi_sdk import nepi_msg
 from nepi_sdk import nepi_img
+from nepi_sdk import nepi_ais
 
 from nepi_sdk.ai_detector_if import AiDetectorIF
 
 # Define your PyTorch model and load the weights
 # model = ...
-
-
-TEST_DETECTION_DICT_ENTRY = {
-    'name': 'TEST_DATA', # Class String Name
-    'id': 1, # Class Index from Classes List
-    'uid': '', # Reserved for unique tracking by downstream applications
-    'prob': .3, # Probability of detection
-    'xmin': 10,
-    'ymin': 10,
-    'xmax': 50,
-    'ymax': 50,
-    'width_pixels': 40,
-    'height_pixels': 40,
-    'area_pixels': 16000,
-    'area_ratio': 0.22857
-}
 
 
 
@@ -120,8 +105,10 @@ class Yolov5Detector():
 
                 self.classes = model_info['classes']['names']
 
+                
                 raw_yolov5_path = r"{}".format(self.yolov5_path)
                 self.model = torch.hub.load(raw_yolov5_path,'custom', path=self.weight_file_path,source='local')
+                
 
                 nepi_msg.publishMsgInfo(self,"Starting ai_if with defualt_config_dict: " + str(self.defualt_config_dict))
                 self.ai_if = AiDetectorIF(model_name = self.node_name,
@@ -154,7 +141,7 @@ class Yolov5Detector():
         if 'tile'  in options_dict.keys():
             tile = options_dict['tile']
         '''
-        cv2_img = nepi_img.resize_proportionally(cv2_img, self.proc_img_width,self.proc_img_height,interp = cv2.INTER_NEAREST)
+        [cv2_img,ratio,new_width,new_height] = nepi_img.resize_proportionally(cv2_img, self.proc_img_width,self.proc_img_height,interp = cv2.INTER_NEAREST)
         
         # Convert BW image to RGB
         if nepi_img.is_gray(cv2_img):
@@ -165,8 +152,11 @@ class Yolov5Detector():
         img_dict = dict()
         img_dict['cv2_img'] = cv2_img
         img_shape = cv2_img.shape
-        img_dict['org_width'] = width 
-        img_dict['orig_height'] = height 
+        img_dict['src_width'] = width 
+        img_dict['src_height'] = height 
+        img_dict['prc_width'] = new_width 
+        img_dict['prc_height'] = new_height 
+        img_dict['ratio'] = ratio 
         img_dict['tiling'] = False
 
         return img_dict
@@ -175,6 +165,7 @@ class Yolov5Detector():
 
     def processDetection(self,img_dict, threshold):
         detect_dict_list = []
+
         tile = False
         # For Future
         #if 'tile'  in options_dict.keys():
@@ -210,6 +201,7 @@ class Yolov5Detector():
                     except Exception as e:
                         nepi_msg.publishMsgInfo(self,"Failed to process img with exception: " + str(e))
                     detect_dict_list = []
+                    rescale_ratio = float(1) / img_dict['ratio']
                     for i, name in enumerate(rp['name']):
                         detect_box_area = ( int(rp['xmax'][i]) - int(rp['xmin'][i]) ) * ( int(rp['ymax'][i]) - int(rp['ymin'][i]) )
                         detect_box_ratio = detect_box_area / cv2_img_area
@@ -222,13 +214,17 @@ class Yolov5Detector():
                             'ymin': int(rp['ymin'][i]),
                             'xmax': int(rp['xmax'][i]),
                             'ymax': int(rp['ymax'][i]),
-                            'width_pixels': cv2_img_width,
-                            'height_pixels': cv2_img_height,
                             'area_pixels': detect_box_area,
                             'area_ratio': detect_box_ratio
                         }
+                        # Rescale to orig image size
+                        detect_dict['xmin'] = int(detect_dict['xmin'] * rescale_ratio)
+                        detect_dict['ymin'] = int(detect_dict['ymin'] * rescale_ratio)
+                        detect_dict['xmax'] = int(detect_dict['xmax'] * rescale_ratio)
+                        detect_dict['ymax'] = int(detect_dict['ymax'] * rescale_ratio)
                         detect_dict_list.append(detect_dict)
                         #nepi_msg.publishMsgInfo(self,"Got detect dict entry: " + str(detect_dict))
+
         return detect_dict_list
 
 

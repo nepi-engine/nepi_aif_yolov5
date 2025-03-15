@@ -100,7 +100,7 @@ install(DIRECTORY launch/
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 set( NEPI_AIF_SHARE_FOLDER 
   # Must hard-coded 
-  /opt/nepi/ros/share/nepi_aifs
+  /opt/nepi/ros/share/nepi_aifs/params
 )
 
 install(DIRECTORY params/
