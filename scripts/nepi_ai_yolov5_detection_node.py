@@ -34,7 +34,7 @@ from nepi_sdk import nepi_msg
 from nepi_sdk import nepi_img
 from nepi_sdk import nepi_ais
 
-from nepi_sdk.ai_detector_if import AiDetectorIF
+from nepi_api.ai_if_detector import AiDetectorIF
 
 # Define your PyTorch model and load the weights
 # model = ...

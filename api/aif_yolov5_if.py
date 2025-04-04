@@ -65,20 +65,21 @@ class Yolov5AIF(object):
 
 
     ai_node_dict = dict()
-    def __init__(self, ai_dict,launch_namespace, mgr_namespace, models_lib_path):
+    def __init__(self, aif_dict,launch_namespace, mgr_namespace, models_lib_path):
       if launch_namespace[-1] == "/":
         launch_namespace = launch_namespace[:-1]
       self.launch_namespace = launch_namespace  
-      #nepi_msg.printMsgWarn("Launch Namespace: " + self.launch_namespace)
+      #nepi_msg.printMsgWarn(self.log_name + "Launch Namespace: " + self.launch_namespace)
       if mgr_namespace[-1] == "/":
         mgr_namespace = mgr_namespace[:-1]
       self.mgr_namespace = mgr_namespace
       self.models_lib_path = models_lib_path
-      self.pkg_name = ai_dict['pkg_name']
-      self.node_file_dict = ai_dict['node_file_dict']
-      self.launch_pkg = ai_dict['launch_pkg_name']
-      self.launch_file = ai_dict['launch_file_name']
-      self.models_folder = ai_dict['models_folder_name']
+      self.pkg_name = aif_dict['pkg_name']
+      self.log_name = self.pkg_name
+      self.node_file_dict = aif_dict['node_file_dict']
+      self.launch_pkg = aif_dict['launch_pkg_name']
+      self.launch_file = aif_dict['launch_file_name']
+      self.models_folder = aif_dict['models_folder_name']
       self.models_folder_path =  os.path.join(self.models_lib_path, self.models_folder)
       nepi_msg.printMsgInfo("Yolov5 models path: " + self.models_folder_path)
 
@@ -89,62 +90,62 @@ class Yolov5AIF(object):
     def getModelsDict(self):
         models_dict = dict()
         # Try to obtain the path to Yolov5 models from the system_mgr
-        nepi_msg.printMsgInfo("ai_yolov5_if: Looking for model files in folder: " + self.models_folder_path)
+        nepi_msg.printMsgInfo(self.log_name + ": Looking for model files in folder: " + self.models_folder_path)
         # Grab the list of all existing yolov5 cfg files
         if os.path.exists(self.models_folder_path) == False:
-            nepi_msg.printMsgInfo("ai_yolov5_if: Failed to find models folder: " + self.models_folder_path)
+            nepi_msg.printMsgInfo(self.log_name + ": Failed to find models folder: " + self.models_folder_path)
             return models_dict
         else:
             self.cfg_files = glob.glob(os.path.join(self.models_folder_path,'*.yaml'))
-            nepi_msg.printMsgInfo("ai_yolov5_if: Found network config files: " + str(self.cfg_files))
+            nepi_msg.printMsgInfo(self.log_name + ": Found network config files: " + str(self.cfg_files))
             # Remove the ros.yaml file -- that one doesn't represent a selectable trained neural net
             for f in self.cfg_files:
                 cfg_dict = dict()
                 success = False
                 try:
-                    #nepi_msg.printMsgWarn("ai_yolov5_if: Opening yaml file: " + f) 
+                    #nepi_msg.printMsgWarn(self.log_name + ": Opening yaml file: " + f) 
                     yaml_stream = open(f, 'r')
                     success = True
-                    #nepi_msg.printMsgWarn("ai_yolov5_if: Opened yaml file: " + f) 
+                    #nepi_msg.printMsgWarn(self.log_name + ": Opened yaml file: " + f) 
                 except Exception as e:
-                    nepi_msg.printMsgWarn("ai_yolov5_if: Failed to open yaml file: " + str(e))
+                    nepi_msg.printMsgWarn(self.log_name + ": Failed to open yaml file: " + str(e))
                 if success:
                     try:
                         # Validate that it is a proper config file and gather weights file size info for load-time estimates
-                        #nepi_msg.printMsgWarn("ai_yolov5_if: Loading yaml data from file: " + f) 
+                        #nepi_msg.printMsgWarn(self.log_name + ": Loading yaml data from file: " + f) 
                         cfg_dict = yaml.load(yaml_stream)  
                         model_keys = list(cfg_dict.keys())
                         model_key = model_keys[0]
-                        #nepi_msg.printMsgWarn("ai_yolov5_if: Loaded yaml data from file: " + f) 
+                        #nepi_msg.printMsgWarn(self.log_name + ": Loaded yaml data from file: " + f) 
                     except Exception as e:
-                        nepi_msg.printMsgWarn("ai_yolov5_if: Failed load yaml data: " + str(e)) 
+                        nepi_msg.printMsgWarn(self.log_name + ": Failed load yaml data: " + str(e)) 
                         success = False 
                 try: 
-                    #nepi_msg.printMsgWarn("ai_yolov5_if: Closing yaml data stream for file: " + f) 
+                    #nepi_msg.printMsgWarn(self.log_name + ": Closing yaml data stream for file: " + f) 
                     yaml_stream.close()
                 except Exception as e:
-                    nepi_msg.printMsgWarn("ai_yolov5_if: Failed close yaml file: " + str(e))
+                    nepi_msg.printMsgWarn(self.log_name + ": Failed close yaml file: " + str(e))
                 
                 if success == False:
-                    nepi_msg.printMsgWarn("ai_yolov5_if: File does not appear to be a valid A/I model config file: " + f + "... not adding this model")
+                    nepi_msg.printMsgWarn(self.log_name + ": File does not appear to be a valid A/I model config file: " + f + "... not adding this model")
                     continue
-                #nepi_msg.printMsgWarn("ai_yolov5_if: Import success: " + str(success) + " with cfg_dict " + str(cfg_dict))
+                #nepi_msg.printMsgWarn(self.log_name + ": Import success: " + str(success) + " with cfg_dict " + str(cfg_dict))
                 cfg_dict_keys = cfg_dict[model_key].keys()
-                #nepi_msg.printMsgWarn("ai_yolov5_if: Imported model key names: " + str(cfg_dict_keys))
-                #nepi_msg.printMsgWarn("ai_yolov3_if: Imported model key names: " + str(cfg_dict_keys))
+                #nepi_msg.printMsgWarn(self.log_name + ": Imported model key names: " + str(cfg_dict_keys))
+                #nepi_msg.printMsgWarn(self.log_name + ": Imported model key names: " + str(cfg_dict_keys))
                 if ("framework" not in cfg_dict_keys):
-                    nepi_msg.printMsgWarn("ai_yolov5_if: Framework does not specified in model yaml file: " + f + "... not adding this model")
+                    nepi_msg.printMsgWarn(self.log_name + ": Framework does not specified in model yaml file: " + f + "... not adding this model")
                     continue
                 if ("weight_file" not in cfg_dict_keys):
-                    nepi_msg.printMsgWarn("ai_yolov5_if: File does not appear to be a valid A/I model config file: " + f + "... not adding this model")
+                    nepi_msg.printMsgWarn(self.log_name + ": File does not appear to be a valid A/I model config file: " + f + "... not adding this model")
                     continue
-                #nepi_msg.printMsgWarn("ai_yolov3_if: Imported model key names: " + str(cfg_dict_keys))
+                #nepi_msg.printMsgWarn(self.log_name + ": Imported model key names: " + str(cfg_dict_keys))
                 if ("image_size" not in cfg_dict_keys):
-                    nepi_msg.printMsgWarn("ai_yolov3_if: File does not specify a image size: " + f + "... not adding this model")
+                    nepi_msg.printMsgWarn(self.log_name + ": File does not specify a image size: " + f + "... not adding this model")
                     continue
-                #nepi_msg.printMsgWarn("ai_yolov3_if: Imported model key names: " + str(cfg_dict_keys))
+                #nepi_msg.printMsgWarn(self.log_name + ": Imported model key names: " + str(cfg_dict_keys))
                 if ("classes" not in cfg_dict_keys):
-                    nepi_msg.printMsgWarn("ai_yolov3_if: File does not specify a classes: " + f + "... not adding this model")
+                    nepi_msg.printMsgWarn(self.log_name + ": File does not specify a classes: " + f + "... not adding this model")
                     continue
 
                 param_file = os.path.basename(f)
@@ -153,24 +154,24 @@ class Yolov5AIF(object):
 
                 
                 if framework != 'yolov5':
-                    nepi_msg.printMsgWarn("ai_yolov5_if: Model " + model_name + " not a yolov3 model" + framework + "... not adding this model")
+                    nepi_msg.printMsgWarn(self.log_name + ": Model " + model_name + " not a yolov3 model" + framework + "... not adding this model")
                     continue
 
 
 
-                #nepi_msg.printMsgWarn("ai_yolov5_if: Checking that model weights file exists: " + weight_file_path + " for model name " + model_name)
+                #nepi_msg.printMsgWarn(self.log_name + ": Checking that model weights file exists: " + weight_file_path + " for model name " + model_name)
                 weight_file = cfg_dict[model_key]["weight_file"]["name"]
                 weight_file_path = os.path.join(self.models_folder_path,weight_file)
                 if not os.path.exists(weight_file_path):
-                    nepi_msg.printMsgWarn("ai_yolov5_if: Model " + model_name + " specifies non-existent weights file " + weight_file_path + "... not adding this model")
+                    nepi_msg.printMsgWarn(self.log_name + ": Model " + model_name + " specifies non-existent weights file " + weight_file_path + "... not adding this model")
                     continue
                 model_type = cfg_dict[model_key]['type']['name']
                 if model_type not in self.node_file_dict.keys():
-                    nepi_msg.printMsgWarn("ai_yolov5_if: Model " + model_name + " specifies non-supported model type " + model_type + "... not adding this model")
+                    nepi_msg.printMsgWarn(self.log_name + ": Model " + model_name + " specifies non-supported model type " + model_type + "... not adding this model")
                     continue
                 else:
                     node_file_name = self.node_file_dict[model_type]
-                model_size = int(os.path.getsize(weight_file_path) / 1000000)
+                model_size_mb = float(os.path.getsize(weight_file_path) / 1000000)
                 model_dict = dict()
                 try:
                     model_dict['param_file'] = param_file
@@ -184,17 +185,20 @@ class Yolov5AIF(object):
                     model_dict['classes'] = cfg_dict[model_key]['classes']['names']
                     model_dict['weight_file']= weight_file
                     model_dict['node_file_name'] = node_file_name
-                    model_dict['size'] = model_size
-                    model_dict['load_time'] = self.TYPICAL_LOAD_TIME_PER_MB * model_size / 1000000
-                    nepi_msg.printMsgInfo("ai_yolov11_if: Model dict create for model : " + model_name)
+                    model_dict['size'] = model_size_mb
+                    model_dict['load_time'] = self.TYPICAL_LOAD_TIME_PER_MB * model_size_mb
+                    nepi_msg.printMsgInfo(self.log_name + ": Model dict create for model : " + model_name)
+                    nepi_msg.printMsgInfo(self.log_name + ": Model has size MB: " + str(model_size_mb) + " and load time per MB: " + str(self.TYPICAL_LOAD_TIME_PER_MB)) 
+                    nepi_msg.printMsgInfo(self.log_name + ": Model has an estimated load time of: " + str(model_dict['load_time']) + " seconds" ) 
                 except Exception as e:
-                    nepi_msg.printMsgInfo("ai_yolov11_if: Failed to get model info : " + str(e))
+                    nepi_msg.printMsgInfo(self.log_name + ": Failed to get model info : " + str(e))
                 models_dict[model_name] = model_dict
-            #nepi_msg.printMsgWarn("Model returning models dict" + str(models_dict))
+        nepi_msg.printMsgWarn(self.log_name + "Model returning models dict" + str(models_dict))
         return models_dict
 
 
     def loadModel(self, model_dict):
+        nepi_msg.printMsgWarn(self.log_name + "Model loading with model dict" + str(model_dict))
         success = False
         model_name = model_dict['model_name']
         node_name = model_name
@@ -211,7 +215,7 @@ class Yolov5AIF(object):
             "param_file_path:=" + os.path.join(model_dict['model_path'],model_dict['param_file']),
             "weight_file_path:=" + os.path.join(model_dict['model_path'],model_dict['weight_file'])
         ]
-        nepi_msg.printMsgInfo("ai_yolov5_if: Launching Yolov5 AI node " + model_name + " with commands: " + str(launch_cmd_line))
+        nepi_msg.printMsgInfo(self.log_name + ": Launching Yolov5 AI node " + model_name + " with commands: " + str(launch_cmd_line))
         node_process = subprocess.Popen(launch_cmd_line)
         self.ai_node_dict[model_name] = {'namesapce':node_namespace, 'process':node_process}
         success = True
@@ -221,7 +225,7 @@ class Yolov5AIF(object):
     def killModel(self,model_name):
         if model_name in self.ai_node_dict.keys():
             node_process = self.ai_node_dict[model_name]['process']
-            nepi_msg.printMsgInfo("ai_yolov5_if: Killing Yolov5 AI node: " + model_name)
+            nepi_msg.printMsgInfo(self.log_name + ": Killing Yolov5 AI node: " + model_name)
             if not (None == node_process):
                 node_process.terminate()
             del self.ai_node_dict[model_name]
@@ -233,7 +237,7 @@ class Yolov5AIF(object):
 if __name__ == '__main__':
     node_name = "ai_yolov5_test"
     while nepi_ros.check_for_node(node_name):
-        nepi_msg.printMsgInfo("ai_yolov5_if: Trying to kill running node: " + node_name)
+        nepi_msg.printMsgInfo(self.log_name + ": Trying to kill running node: " + node_name)
         nepi_ros.kill_node(node_name)
         nepi_ros.sleep(2,10)
     Yolov5AIF(TEST_AI_DICT,TEST_LAUNCH_NAMESPACE,TEST_MGR_NAMESPACE,TEST_MODELS_LIB_PATH)

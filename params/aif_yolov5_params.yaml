@@ -9,4 +9,6 @@ node_file_dict:
 launch_pkg_name: nepi_aif_yolov5
 launch_file_name: yolov5_ros.launch
 models_folder_name: yolov5
+plays_well: True
 supports_preload: True
+wait_for_load: False
