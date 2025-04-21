@@ -20,7 +20,6 @@ import os
 import time
 import copy
 import sys
-import rospy
 import torch
 torch.set_num_threads(3)
 import cv2
@@ -30,11 +29,12 @@ np.bool = np.bool_
 import pandas
 
 from nepi_sdk import nepi_ros
-from nepi_sdk import nepi_msg
+from nepi_sdk import nepi_utils
 from nepi_sdk import nepi_img
 from nepi_sdk import nepi_ais
 
 from nepi_api.ai_if_detector import AiDetectorIF
+from nepi_api.messages_if import MsgIF
 
 # Define your PyTorch model and load the weights
 # model = ...
@@ -48,14 +48,25 @@ class Yolov5Detector():
     ### Node Initialization
     DEFAULT_NODE_NAME = "ai_yolov5" # Can be overwitten by luanch command
     def __init__(self):
-        #### APP NODE INIT SETUP ####
-        nepi_ros.init_node(name= self.DEFAULT_NODE_NAME)
-        self.node_name = nepi_ros.get_node_name()
+        ####  NODE Initialization ####
+        self.class_name = type(self).__name__
         self.base_namespace = nepi_ros.get_base_namespace()
-        self.node_namespace = self.base_namespace + self.node_name
-        nepi_msg.createMsgPublishers(self)
-        nepi_msg.publishMsgInfo(self,"Starting Initialization Processes")
-        ##############################
+        self.node_name = nepi_ros.get_node_name()
+        self.node_namespace = nepi_ros.get_node_namespace()
+
+        ##############################  
+        # Create Msg Class
+        self.msg_if = MsgIF(log_name = self.class_name)
+        self.msg_if.pub_info("Starting Node Initialization Processes")
+
+        ##############################  
+        # Initialize Class Variables
+        # Create Msg Class
+        self.msg_if = MsgIF(log_name = self.class_name)
+        self.msg_if.pub_info("Starting Node Initialization Processes")
+
+        ##############################  
+        # Initialize Class Variables
 
         if torch.cuda.is_available():
             device = torch.device('cuda')
@@ -67,7 +78,7 @@ class Yolov5Detector():
 
         # Initialize parameters and fields.
         node_params = nepi_ros.get_param(self,"~")
-        nepi_msg.publishMsgInfo(self,"Starting node params: " + str(node_params))
+        self.msg_if.pub_info("Starting node params: " + str(node_params))
         self.all_namespace = nepi_ros.get_param(self,"~all_namespace","")
         if self.all_namespace == "":
             self.all_namespace = self.node_namespace
@@ -75,13 +86,13 @@ class Yolov5Detector():
         self.yolov5_path = nepi_ros.get_param(self,"~yolov5_path","")
         if self.weight_file_path == "" or self.yolov5_path == "":
             nepi_msg.publishMsgWarn(self,"Failed to get required node info from param server: ")
-            rospy.signal_shutdown("Failed to get valid model info from param")
+            nepi_ros.signal_shutdown("Failed to get valid model info from param")
         else:
             # The ai_models param is created by the launch files load network_param_file line
             model_info = nepi_ros.get_param(self,"~ai_model","")
             if model_info == "":
                 nepi_msg.publishMsgWarn(self,"Failed to get required model info from params: ")
-                rospy.signal_shutdown("Failed to get valid model file paths")
+                nepi_ros.signal_shutdown("Failed to get valid model file paths")
             else:
                 try: 
                     model_framework = model_info['framework']['name']
@@ -92,16 +103,16 @@ class Yolov5Detector():
                     self.proc_img_height = model_info['image_size']['image_height']['value']
                 except Exception as e:
                     nepi_msg.publishMsgWarn(self,"Failed to get required model info from params: " + str(e))
-                    rospy.signal_shutdown("Failed to get valid model file paths")
+                    nepi_ros.signal_shutdown("Failed to get valid model file paths")
 
                 if model_framework != 'yolov5':
                     nepi_msg.publishMsgWarn(self,"Model not a yolov5 model: " + model_framework)
-                    rospy.signal_shutdown("Model not a valid framework")
+                    nepi_ros.signal_shutdown("Model not a valid framework")
 
 
                 if model_type != 'detection':
                     nepi_msg.publishMsgWarn(self,"Model not a valid type: " + model_type)
-                    rospy.signal_shutdown("Model not a valid type")
+                    nepi_ros.signal_shutdown("Model not a valid type")
 
                 self.classes = model_info['classes']['names']
 
@@ -110,7 +121,7 @@ class Yolov5Detector():
                 self.model = torch.hub.load(raw_yolov5_path,'custom', path=self.weight_file_path,source='local')
                 
 
-                nepi_msg.publishMsgInfo(self,"Starting ai_if with defualt_config_dict: " + str(self.defualt_config_dict))
+                self.msg_if.pub_info("Starting ai_if with defualt_config_dict: " + str(self.defualt_config_dict))
                 self.ai_if = AiDetectorIF(model_name = self.node_name,
                                     framework = model_framework,
                                     description = model_description,
@@ -125,7 +136,7 @@ class Yolov5Detector():
 
                 #########################################################
                 ## Initiation Complete
-                nepi_msg.publishMsgInfo(self,"Initialization Complete")
+                self.msg_if.pub_info("Initialization Complete")
                 # Spin forever (until object is detected)
                 nepi_ros.spin()
                 #########################################################        
@@ -147,7 +158,7 @@ class Yolov5Detector():
         if nepi_img.is_gray(cv2_img):
             cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_GRAY2BGR)
 
-        #nepi_msg.publishMsgInfo(self,":yolov5: Preprocessed image with image size: " + str(cv2_img.shape))
+        #self.msg_if.pub_info(":yolov5: Preprocessed image with image size: " + str(cv2_img.shape))
         # Create image dict with new image
         img_dict = dict()
         img_dict['cv2_img'] = cv2_img
@@ -183,7 +194,7 @@ class Yolov5Detector():
                     cv2_img_width = cv2_img_shape[1]
                     cv2_img_height = cv2_img_shape[0]
                     cv2_img_area = cv2_img_shape[0] * cv2_img_shape[1]
-                    #nepi_msg.publishMsgInfo(self,":yolov5: Processing detection with image size: " + str(cv2_img_shape))
+                    #self.msg_if.pub_info(":yolov5: Processing detection with image size: " + str(cv2_img_shape))
 
                     # Update model settings
                     self.model.conf = threshold  # Confidence threshold (0-1)
@@ -195,11 +206,11 @@ class Yolov5Detector():
                     try:
                         # Inference
                         results = self.model(cv2_img)
-                        #nepi_msg.publishMsgInfo(self,"Got Yolo detection result: " + str(results))
+                        #self.msg_if.pub_info("Got Yolo detection result: " + str(results))
                         rp = results.pandas().xyxy[0]  # img1 predictions (pandas)
-                        #nepi_msg.publishMsgInfo(self,"Got pandas formated results: " + str(rp))
+                        #self.msg_if.pub_info("Got pandas formated results: " + str(rp))
                     except Exception as e:
-                        nepi_msg.publishMsgInfo(self,"Failed to process img with exception: " + str(e))
+                        self.msg_if.pub_info("Failed to process img with exception: " + str(e))
                     detect_dict_list = []
                     rescale_ratio = float(1) / img_dict['ratio']
                     for i, name in enumerate(rp['name']):
@@ -223,7 +234,7 @@ class Yolov5Detector():
                         detect_dict['xmax'] = int(detect_dict['xmax'] * rescale_ratio)
                         detect_dict['ymax'] = int(detect_dict['ymax'] * rescale_ratio)
                         detect_dict_list.append(detect_dict)
-                        #nepi_msg.publishMsgInfo(self,"Got detect dict entry: " + str(detect_dict))
+                        #self.msg_if.pub_info("Got detect dict entry: " + str(detect_dict))
 
         return detect_dict_list
 
