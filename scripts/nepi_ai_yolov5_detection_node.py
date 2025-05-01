@@ -42,13 +42,14 @@ from nepi_api.messages_if import MsgIF
 
 
 class Yolov5Detector():
-    defualt_config_dict = {'threshold': 0.3,'max_rate': 5}
-
+    default_config_dict = {'threshold': 0.3,'max_rate': 5}
+    model = None
     #######################
     ### Node Initialization
     DEFAULT_NODE_NAME = "ai_yolov5" # Can be overwitten by luanch command
     def __init__(self):
         ####  NODE Initialization ####
+        nepi_ros.init_node(name= self.DEFAULT_NODE_NAME)
         self.class_name = type(self).__name__
         self.base_namespace = nepi_ros.get_base_namespace()
         self.node_name = nepi_ros.get_node_name()
@@ -70,28 +71,28 @@ class Yolov5Detector():
 
         if torch.cuda.is_available():
             device = torch.device('cuda')
-            nepi_msg.publishMsgWarn(self,'GPU is available. Using device: ' + str(device))
+            self.msg_if.pub_warn('GPU is available. Using device: ' + str(device))
         else:
             device = torch.device('cpu')
-            nepi_msg.publishMsgWarn(self,'GPU not available, using CPU instead.')
+            self.msg_if.pub_warn('GPU not available, using CPU instead.')
 
 
         # Initialize parameters and fields.
-        node_params = nepi_ros.get_param(self,"~")
+        node_params = nepi_ros.get_param("~")
         self.msg_if.pub_info("Starting node params: " + str(node_params))
-        self.all_namespace = nepi_ros.get_param(self,"~all_namespace","")
+        self.all_namespace = nepi_ros.get_param("~all_namespace","")
         if self.all_namespace == "":
             self.all_namespace = self.node_namespace
-        self.weight_file_path = nepi_ros.get_param(self,"~weight_file_path","")
-        self.yolov5_path = nepi_ros.get_param(self,"~yolov5_path","")
+        self.weight_file_path = nepi_ros.get_param("~weight_file_path","")
+        self.yolov5_path = nepi_ros.get_param("~yolov5_path","")
         if self.weight_file_path == "" or self.yolov5_path == "":
-            nepi_msg.publishMsgWarn(self,"Failed to get required node info from param server: ")
+            self.msg_if.pub_warn("Failed to get required node info from param server: ")
             nepi_ros.signal_shutdown("Failed to get valid model info from param")
         else:
             # The ai_models param is created by the launch files load network_param_file line
-            model_info = nepi_ros.get_param(self,"~ai_model","")
+            model_info = nepi_ros.get_param("~ai_model","")
             if model_info == "":
-                nepi_msg.publishMsgWarn(self,"Failed to get required model info from params: ")
+                self.msg_if.pub_warn("Failed to get required model info from params: ")
                 nepi_ros.signal_shutdown("Failed to get valid model file paths")
             else:
                 try: 
@@ -102,16 +103,16 @@ class Yolov5Detector():
                     self.proc_img_width = model_info['image_size']['image_width']['value']
                     self.proc_img_height = model_info['image_size']['image_height']['value']
                 except Exception as e:
-                    nepi_msg.publishMsgWarn(self,"Failed to get required model info from params: " + str(e))
+                    self.msg_if.pub_warn("Failed to get required model info from params: " + str(e))
                     nepi_ros.signal_shutdown("Failed to get valid model file paths")
 
                 if model_framework != 'yolov5':
-                    nepi_msg.publishMsgWarn(self,"Model not a yolov5 model: " + model_framework)
+                    self.msg_if.pub_warn("Model not a yolov5 model: " + model_framework)
                     nepi_ros.signal_shutdown("Model not a valid framework")
 
 
                 if model_type != 'detection':
-                    nepi_msg.publishMsgWarn(self,"Model not a valid type: " + model_type)
+                    self.msg_if.pub_warn("Model not a valid type: " + model_type)
                     nepi_ros.signal_shutdown("Model not a valid type")
 
                 self.classes = model_info['classes']['names']
@@ -121,14 +122,14 @@ class Yolov5Detector():
                 self.model = torch.hub.load(raw_yolov5_path,'custom', path=self.weight_file_path,source='local')
                 
 
-                self.msg_if.pub_info("Starting ai_if with defualt_config_dict: " + str(self.defualt_config_dict))
+                self.msg_if.pub_info("Starting ai_if with default_config_dict: " + str(self.default_config_dict))
                 self.ai_if = AiDetectorIF(model_name = self.node_name,
                                     framework = model_framework,
                                     description = model_description,
                                     proc_img_height = self.proc_img_height,
                                     proc_img_width = self.proc_img_width,
                                     classes_list = self.classes,
-                                    defualt_config_dict = self.defualt_config_dict,
+                                    default_config_dict = self.default_config_dict,
                                     all_namespace = self.all_namespace,
                                     preprocessImageFunction = self.preprocessImage,
                                     processDetectionFunction = self.processDetection,
@@ -181,7 +182,7 @@ class Yolov5Detector():
         # For Future
         #if 'tile'  in options_dict.keys():
         #    tile = options_dict['tile']
-        if img_dict is not None:
+        if img_dict is not None and self.model is not None:
             if 'cv2_img' in img_dict.keys():
                 cv2_img = img_dict['cv2_img']
                 if cv2_img is not None:
@@ -235,7 +236,8 @@ class Yolov5Detector():
                         detect_dict['ymax'] = int(detect_dict['ymax'] * rescale_ratio)
                         detect_dict_list.append(detect_dict)
                         #self.msg_if.pub_info("Got detect dict entry: " + str(detect_dict))
-
+        else:
+            time.sleep(1)
         return detect_dict_list
 
 
