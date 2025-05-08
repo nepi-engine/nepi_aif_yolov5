@@ -164,8 +164,8 @@ class Yolov5Detector():
         img_dict = dict()
         img_dict['cv2_img'] = cv2_img
         img_shape = cv2_img.shape
-        img_dict['src_width'] = width 
-        img_dict['src_height'] = height 
+        img_dict['image_width'] = width 
+        img_dict['image_height'] = height 
         img_dict['prc_width'] = new_width 
         img_dict['prc_height'] = new_height 
         img_dict['ratio'] = ratio 
