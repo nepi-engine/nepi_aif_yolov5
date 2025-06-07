@@ -28,7 +28,7 @@ import numpy as np
 np.bool = np.bool_
 import pandas
 
-from nepi_sdk import nepi_ros
+from nepi_sdk import nepi_sdk
 from nepi_sdk import nepi_utils
 from nepi_sdk import nepi_img
 from nepi_sdk import nepi_ais
@@ -49,11 +49,11 @@ class Yolov5Detector():
     DEFAULT_NODE_NAME = "ai_yolov5" # Can be overwitten by luanch command
     def __init__(self):
         ####  NODE Initialization ####
-        nepi_ros.init_node(name= self.DEFAULT_NODE_NAME)
+        nepi_sdk.init_node(name= self.DEFAULT_NODE_NAME)
         self.class_name = type(self).__name__
-        self.base_namespace = nepi_ros.get_base_namespace()
-        self.node_name = nepi_ros.get_node_name()
-        self.node_namespace = nepi_ros.get_node_namespace()
+        self.base_namespace = nepi_sdk.get_base_namespace()
+        self.node_name = nepi_sdk.get_node_name()
+        self.node_namespace = nepi_sdk.get_node_namespace()
 
         ##############################  
         # Create Msg Class
@@ -78,22 +78,22 @@ class Yolov5Detector():
 
 
         # Initialize parameters and fields.
-        node_params = nepi_ros.get_param("~")
+        node_params = nepi_sdk.get_param("~")
         self.msg_if.pub_info("Starting node params: " + str(node_params))
-        self.all_namespace = nepi_ros.get_param("~all_namespace","")
+        self.all_namespace = nepi_sdk.get_param("~all_namespace","")
         if self.all_namespace == "":
             self.all_namespace = self.node_namespace
-        self.weight_file_path = nepi_ros.get_param("~weight_file_path","")
-        self.yolov5_path = nepi_ros.get_param("~yolov5_path","")
+        self.weight_file_path = nepi_sdk.get_param("~weight_file_path","")
+        self.yolov5_path = nepi_sdk.get_param("~yolov5_path","")
         if self.weight_file_path == "" or self.yolov5_path == "":
             self.msg_if.pub_warn("Failed to get required node info from param server: ")
-            nepi_ros.signal_shutdown("Failed to get valid model info from param")
+            nepi_sdk.signal_shutdown("Failed to get valid model info from param")
         else:
             # The ai_models param is created by the launch files load network_param_file line
-            model_info = nepi_ros.get_param("~ai_model","")
+            model_info = nepi_sdk.get_param("~ai_model","")
             if model_info == "":
                 self.msg_if.pub_warn("Failed to get required model info from params: ")
-                nepi_ros.signal_shutdown("Failed to get valid model file paths")
+                nepi_sdk.signal_shutdown("Failed to get valid model file paths")
             else:
                 try: 
                     model_framework = model_info['framework']['name']
@@ -104,16 +104,16 @@ class Yolov5Detector():
                     self.proc_img_height = model_info['image_size']['image_height']['value']
                 except Exception as e:
                     self.msg_if.pub_warn("Failed to get required model info from params: " + str(e))
-                    nepi_ros.signal_shutdown("Failed to get valid model file paths")
+                    nepi_sdk.signal_shutdown("Failed to get valid model file paths")
 
                 if model_framework != 'yolov5':
                     self.msg_if.pub_warn("Model not a yolov5 model: " + model_framework)
-                    nepi_ros.signal_shutdown("Model not a valid framework")
+                    nepi_sdk.signal_shutdown("Model not a valid framework")
 
 
                 if model_type != 'detection':
                     self.msg_if.pub_warn("Model not a valid type: " + model_type)
-                    nepi_ros.signal_shutdown("Model not a valid type")
+                    nepi_sdk.signal_shutdown("Model not a valid type")
 
                 self.classes = model_info['classes']['names']
 
@@ -139,7 +139,7 @@ class Yolov5Detector():
                 ## Initiation Complete
                 self.msg_if.pub_info("Initialization Complete")
                 # Spin forever (until object is detected)
-                nepi_ros.spin()
+                nepi_sdk.spin()
                 #########################################################        
               
 
