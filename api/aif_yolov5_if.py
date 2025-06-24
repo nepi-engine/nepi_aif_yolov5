@@ -85,14 +85,14 @@ class Yolov5AIF(object):
     def getModelsDict(self):
         models_dict = dict()
         # Try to obtain the path to Yolov5 models from the system_mgr
-        nepi_sdk.log_msg_info(self.log_name + ": Looking for model files in folder: " + self.models_folder_path)
+        nepi_sdk.log_msg_debug(self.log_name + ": Looking for model files in folder: " + self.models_folder_path, throttle_s = 5.0)
         # Grab the list of all existing yolov5 cfg files
         if os.path.exists(self.models_folder_path) == False:
-            nepi_sdk.log_msg_info(self.log_name + ": Failed to find models folder: " + self.models_folder_path)
+            nepi_sdk.log_msg_debug(self.log_name + ": Failed to find models folder: " + self.models_folder_path, throttle_s = 5.0)
             return models_dict
         else:
             self.cfg_files = glob.glob(os.path.join(self.models_folder_path,'*.yaml'))
-            nepi_sdk.log_msg_info(self.log_name + ": Found network config files: " + str(self.cfg_files))
+            #nepi_sdk.log_msg_info(self.log_name + ": Found network config files: " + str(self.cfg_files))
             # Remove the ros.yaml file -- that one doesn't represent a selectable trained neural net
             for f in self.cfg_files:
                 cfg_dict = dict()
@@ -103,7 +103,7 @@ class Yolov5AIF(object):
                     success = True
                     #nepi_sdk.log_msg_warn(self.log_name + ": Opened yaml file: " + f) 
                 except Exception as e:
-                    nepi_sdk.log_msg_warn(self.log_name + ": Failed to open yaml file: " + str(e))
+                    nepi_sdk.log_msg_warn(self.log_name + ": Failed to open yaml file: " + str(e), throttle_s = 5.0)
                 if success:
                     try:
                         # Validate that it is a proper config file and gather weights file size info for load-time estimates
@@ -113,13 +113,13 @@ class Yolov5AIF(object):
                         model_key = model_keys[0]
                         #nepi_sdk.log_msg_warn(self.log_name + ": Loaded yaml data from file: " + f) 
                     except Exception as e:
-                        nepi_sdk.log_msg_warn(self.log_name + ": Failed load yaml data: " + str(e)) 
+                        nepi_sdk.log_msg_warn(self.log_name + ": Failed load yaml data: " + str(e), throttle_s = 5.0)
                         success = False 
                 try: 
                     #nepi_sdk.log_msg_warn(self.log_name + ": Closing yaml data stream for file: " + f) 
                     yaml_stream.close()
                 except Exception as e:
-                    nepi_sdk.log_msg_warn(self.log_name + ": Failed close yaml file: " + str(e))
+                    nepi_sdk.log_msg_warn(self.log_name + ": Failed close yaml file: " + str(e), throttle_s = 5.0)
                 
                 if success == False:
                     nepi_sdk.log_msg_warn(self.log_name + ": File does not appear to be a valid A/I model config file: " + f + "... not adding this model")
@@ -129,18 +129,18 @@ class Yolov5AIF(object):
                 #nepi_sdk.log_msg_warn(self.log_name + ": Imported model key names: " + str(cfg_dict_keys))
                 #nepi_sdk.log_msg_warn(self.log_name + ": Imported model key names: " + str(cfg_dict_keys))
                 if ("framework" not in cfg_dict_keys):
-                    nepi_sdk.log_msg_warn(self.log_name + ": Framework does not specified in model yaml file: " + f + "... not adding this model")
+                    nepi_sdk.log_msg_warn(self.log_name + ": Framework does not specified in model yaml file: " + f + "... not adding this model", throttle_s = 5.0)
                     continue
                 if ("weight_file" not in cfg_dict_keys):
-                    nepi_sdk.log_msg_warn(self.log_name + ": File does not appear to be a valid A/I model config file: " + f + "... not adding this model")
+                    nepi_sdk.log_msg_warn(self.log_name + ": File does not appear to be a valid A/I model config file: " + f + "... not adding this model", throttle_s = 5.0)
                     continue
                 #nepi_sdk.log_msg_warn(self.log_name + ": Imported model key names: " + str(cfg_dict_keys))
                 if ("image_size" not in cfg_dict_keys):
-                    nepi_sdk.log_msg_warn(self.log_name + ": File does not specify a image size: " + f + "... not adding this model")
+                    nepi_sdk.log_msg_warn(self.log_name + ": File does not specify a image size: " + f + "... not adding this model", throttle_s = 5.0)
                     continue
                 #nepi_sdk.log_msg_warn(self.log_name + ": Imported model key names: " + str(cfg_dict_keys))
                 if ("classes" not in cfg_dict_keys):
-                    nepi_sdk.log_msg_warn(self.log_name + ": File does not specify a classes: " + f + "... not adding this model")
+                    nepi_sdk.log_msg_warn(self.log_name + ": File does not specify a classes: " + f + "... not adding this model", throttle_s = 5.0)
                     continue
 
                 param_file = os.path.basename(f)
@@ -149,7 +149,7 @@ class Yolov5AIF(object):
 
                 
                 if framework != 'yolov5':
-                    nepi_sdk.log_msg_warn(self.log_name + ": Model " + model_name + " not a yolov3 model" + framework + "... not adding this model")
+                    nepi_sdk.log_msg_warn(self.log_name + ": Model " + model_name + " not a yolov3 model" + framework + "... not adding this model", throttle_s = 5.0)
                     continue
 
 
@@ -158,11 +158,11 @@ class Yolov5AIF(object):
                 weight_file = cfg_dict[model_key]["weight_file"]["name"]
                 weight_file_path = os.path.join(self.models_folder_path,weight_file)
                 if not os.path.exists(weight_file_path):
-                    nepi_sdk.log_msg_warn(self.log_name + ": Model " + model_name + " specifies non-existent weights file " + weight_file_path + "... not adding this model")
+                    nepi_sdk.log_msg_warn(self.log_name + ": Model " + model_name + " specifies non-existent weights file " + weight_file_path + "... not adding this model", throttle_s = 5.0)
                     continue
                 model_type = cfg_dict[model_key]['type']['name']
                 if model_type not in self.node_file_dict.keys():
-                    nepi_sdk.log_msg_warn(self.log_name + ": Model " + model_name + " specifies non-supported model type " + model_type + "... not adding this model")
+                    nepi_sdk.log_msg_warn(self.log_name + ": Model " + model_name + " specifies non-supported model type " + model_type + "... not adding this model", throttle_s = 5.0)
                     continue
                 else:
                     node_file_name = self.node_file_dict[model_type]
