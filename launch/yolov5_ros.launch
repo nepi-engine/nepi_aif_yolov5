@@ -10,7 +10,7 @@
   <arg name="all_namespace" default="" />
 
   <!-- Set paths. -->
-  <arg name="yolov5_path"          default="/opt/nepi/ros/share/yolov5"/>
+  <arg name="yolov5_path"          default="/opt/nepi/engine/share/yolov5"/>
   <arg name="param_file_path"          default="/mnt/nepi_storage/ai_models/darknet/common_object_detection.yaml"/>
   <arg name="weight_file_path"          default=""/>
 

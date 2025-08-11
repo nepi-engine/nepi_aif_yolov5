@@ -6,7 +6,7 @@ This file is part of nepi-engine
 
 License: 3-clause BSD, see https://opensource.org/licenses/BSD-3-Clause
 ]]
-cmake_minimum_required(VERSION 1.0.0)
+cmake_minimum_required(VERSION 3.5)
 project(nepi_aif_yolov5)
 
 ## Find catkin macros and libraries
@@ -100,7 +100,7 @@ install(DIRECTORY launch/
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 set( NEPI_AIF_SHARE_FOLDER 
   # Must hard-coded 
-  /opt/nepi/ros/share/nepi_aifs
+  /opt/nepi/engine/share/nepi_aifs
 )
 
 install(DIRECTORY params/
@@ -109,7 +109,7 @@ install(DIRECTORY params/
 
 set( NEPI_API_FOLDER 
   # Must hard-coded 
-  /opt/nepi/ros/lib/python3/dist-packages/nepi_api
+  /opt/nepi/engine/lib/python3/dist-packages/nepi_api
 )
 
 install(DIRECTORY api/
