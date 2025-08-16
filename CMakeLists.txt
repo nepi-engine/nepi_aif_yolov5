@@ -82,6 +82,30 @@ catkin_package(
 ## Install ##
 #############
 
+if(NOT NEPI_BASE)
+  set( NEPI_BASE 
+    /opt/nepi
+  )
+endif()
+
+if(NOT NEPI_RUI)
+  set( NEPI_RUI 
+    ${NEPI_BASE}/nepi_rui
+  )
+endif()
+
+if(NOT NEPI_ENGINE)
+  set( NEPI_ENGINE 
+    ${NEPI_BASE}/nepi_engine
+  )
+endif()
+
+if(NOT NEPI_ETC)
+  set( NEPI_ETC 
+    ${NEPI_BASE}/etc
+  )
+endif()
+
 # all install targets should use catkin DESTINATION variables
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
@@ -100,7 +124,7 @@ install(DIRECTORY launch/
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 set( NEPI_AIF_SHARE_FOLDER 
   # Must hard-coded 
-  /opt/nepi/engine/share/nepi_aifs
+  ${NEPI_ENGINE}/share/nepi_aifs
 )
 
 install(DIRECTORY params/
@@ -109,7 +133,7 @@ install(DIRECTORY params/
 
 set( NEPI_API_FOLDER 
   # Must hard-coded 
-  /opt/nepi/engine/lib/python3/dist-packages/nepi_api
+  ${NEPI_ENGINE}/lib/python3/dist-packages/nepi_api
 )
 
 install(DIRECTORY api/

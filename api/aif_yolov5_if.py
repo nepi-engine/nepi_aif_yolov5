@@ -37,7 +37,7 @@ TEST_AI_DICT = {
 'description': 'Yolov5 ai framework support', 
 'pkg_name': 'nepi_aif_yolov5', 
 'if_file_name': 'aif_yolov5_if.py', 
-'if_path_name': '/opt/nepi/engine/share/nepi_aifs', 
+'if_path_name': '/opt/nepi/nepi_engine/share/nepi_aifs', 
 'if_module_name': 'aif_yolov5_if', 
 'if_class_name': 'Yolov5AIF', 
 'models_folder_name': 'yolov5', 
@@ -56,7 +56,7 @@ TEST_MODELS_LIB_PATH = "/mnt/nepi_storage/ai_models/"
 class Yolov5AIF(object):
     TYPICAL_LOAD_TIME_PER_MB = 3.5
 
-    yolov5_path = '/opt/nepi/engine/share/yolov5'
+    yolov5_path = '/opt/nepi/nepi_engine/share/yolov5'
 
 
     ai_node_dict = dict()
