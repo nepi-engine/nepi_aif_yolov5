@@ -85,7 +85,7 @@ class Yolov5AIF(object):
     def getModelsDict(self):
         models_dict = dict()
         # Try to obtain the path to Yolov5 models from the system_mgr
-        nepi_sdk.log_msg_debug(self.log_name + ": Looking for model files in folder: " + self.models_folder_path, throttle_s = 5.0)
+        #nepi_sdk.log_msg_debug(self.log_name + ": Looking for model files in folder: " + self.models_folder_path, throttle_s = 5.0)
         # Grab the list of all existing yolov5 cfg files
         if os.path.exists(self.models_folder_path) == False:
             nepi_sdk.log_msg_debug(self.log_name + ": Failed to find models folder: " + self.models_folder_path, throttle_s = 5.0)
@@ -182,13 +182,13 @@ class Yolov5AIF(object):
                     model_dict['node_file_name'] = node_file_name
                     model_dict['size'] = model_size_mb
                     model_dict['load_time'] = self.TYPICAL_LOAD_TIME_PER_MB * model_size_mb
-                    nepi_sdk.log_msg_info(self.log_name + ": Model dict create for model : " + model_name)
-                    nepi_sdk.log_msg_info(self.log_name + ": Model has size MB: " + str(model_size_mb) + " and load time per MB: " + str(self.TYPICAL_LOAD_TIME_PER_MB)) 
-                    nepi_sdk.log_msg_info(self.log_name + ": Model has an estimated load time of: " + str(model_dict['load_time']) + " seconds" ) 
+                    #nepi_sdk.log_msg_info(self.log_name + ": Model dict create for model : " + model_name)
+                    #nepi_sdk.log_msg_info(self.log_name + ": Model has size MB: " + str(model_size_mb) + " and load time per MB: " + str(self.TYPICAL_LOAD_TIME_PER_MB)) 
+                    #nepi_sdk.log_msg_info(self.log_name + ": Model has an estimated load time of: " + str(model_dict['load_time']) + " seconds" ) 
                 except Exception as e:
                     nepi_sdk.log_msg_info(self.log_name + ": Failed to get model info : " + str(e))
                 models_dict[model_name] = model_dict
-        nepi_sdk.log_msg_warn(self.log_name + "Model returning models dict" + str(models_dict))
+        #nepi_sdk.log_msg_warn(self.log_name + "Model returning models dict" + str(models_dict))
         return models_dict
 
 
