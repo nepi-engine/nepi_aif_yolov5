@@ -197,8 +197,6 @@ class Yolov5Detector():
 
                     # Convert BGR image RGB
                     cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
-                    
-                    cv2_img = img_dict['cv2_img']
                     cv2_img_shape = cv2_img.shape
                     cv2_img_width = cv2_img_shape[1]
                     cv2_img_height = cv2_img_shape[0]
