@@ -104,7 +104,7 @@ class Yolov5AIF(object):
                     #nepi_sdk.log_msg_warn(self.log_name + ": Opened yaml file: " + f) 
                 except Exception as e:
                     nepi_sdk.log_msg_warn(self.log_name + ": Failed to open yaml file: " + str(e), throttle_s = 5.0)
-                if success:
+                if success == True:
                     try:
                         # Validate that it is a proper config file and gather weights file size info for load-time estimates
                         #nepi_sdk.log_msg_warn(self.log_name + ": Loading yaml data from file: " + f) 
