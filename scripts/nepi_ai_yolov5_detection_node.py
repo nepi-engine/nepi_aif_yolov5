@@ -31,7 +31,7 @@ import pandas
 from nepi_sdk import nepi_sdk
 from nepi_sdk import nepi_utils
 from nepi_sdk import nepi_img
-from nepi_sdk import nepi_ais
+
 
 from nepi_api.ai_if_detector import AiDetectorIF
 from nepi_api.messages_if import MsgIF
@@ -47,8 +47,10 @@ class Yolov5Detector():
     #######################
     ### Node Initialization
     DEFAULT_NODE_NAME = "ai_yolov5" # Can be overwitten by luanch command
+    MODEL_FRAMEWORK="yolov5"
+
     def __init__(self):
-        ####  NODE Initialization ####
+       ####  NODE Initialization ####
         nepi_sdk.init_node(name= self.DEFAULT_NODE_NAME)
         self.class_name = type(self).__name__
         self.base_namespace = nepi_sdk.get_base_namespace()
@@ -60,37 +62,29 @@ class Yolov5Detector():
         self.msg_if = MsgIF(log_name = self.class_name)
         self.msg_if.pub_info("Starting Node Initialization Processes")
 
-        ##############################  
-        # Initialize Class Variables
-        # Create Msg Class
-        self.msg_if = MsgIF(log_name = self.class_name)
-        self.msg_if.pub_info("Starting Node Initialization Processes")
 
         ##############################  
+        # Import ultralytics here so we can message
+
+
+
+        ##############################  
         # Initialize Class Variables
-
-        if torch.cuda.is_available():
-            device = torch.device('cuda')
-            self.msg_if.pub_warn('GPU is available. Using device: ' + str(device))
-        else:
-            device = torch.device('cpu')
-            self.msg_if.pub_warn('GPU not available, using CPU instead.')
-
-
-        # Initialize parameters and fields.
         node_params = nepi_sdk.get_param("~")
         self.msg_if.pub_info("Starting node params: " + str(node_params))
-        self.all_namespace = nepi_sdk.get_param("~all_namespace","")
+        param_namespace = nepi_sdk.create_namespace(self.node_namespace,'all_namespace')
+        self.all_namespace = nepi_sdk.get_param(param_namespace,"")
         if self.all_namespace == "":
             self.all_namespace = self.node_namespace
-        self.weight_file_path = nepi_sdk.get_param("~weight_file_path","")
-        self.yolov5_path = nepi_sdk.get_param("~yolov5_path","")
-        if self.weight_file_path == "" or self.yolov5_path == "":
-            self.msg_if.pub_warn("Failed to get required node info from param server: ")
+        param_namespace = nepi_sdk.create_namespace(self.node_namespace,'weight_file_path')
+        self.weight_file_path = nepi_sdk.get_param(param_namespace,"")
+        if self.weight_file_path == "":
+            self.msg_if.pub_warn("Failed to get required node info from param server at: " + str(param_namespace))
             nepi_sdk.signal_shutdown("Failed to get valid model info from param")
         else:
             # The ai_models param is created by the launch files load network_param_file line
-            model_info = nepi_sdk.get_param("~ai_model","")
+            param_namespace = nepi_sdk.create_namespace(self.node_namespace,'ai_model')
+            model_info = nepi_sdk.get_param(param_namespace,"")
             if model_info == "":
                 self.msg_if.pub_warn("Failed to get required model info from params: ")
                 nepi_sdk.signal_shutdown("Failed to get valid model file paths")
@@ -106,8 +100,8 @@ class Yolov5Detector():
                     self.msg_if.pub_warn("Failed to get required model info from params: " + str(e))
                     nepi_sdk.signal_shutdown("Failed to get valid model file paths")
 
-                if model_framework != 'yolov5':
-                    self.msg_if.pub_warn("Model not a yolov5 model: " + model_framework)
+                if model_framework != self.MODEL_FRAMEWORK:
+                    self.msg_if.pub_warn("Model not a " + self.MODEL_FRAMEWORK  + " model: " + model_framework)
                     nepi_sdk.signal_shutdown("Model not a valid framework")
 
 
@@ -115,12 +109,19 @@ class Yolov5Detector():
                     self.msg_if.pub_warn("Model not a valid type: " + model_type)
                     nepi_sdk.signal_shutdown("Model not a valid type")
 
-                self.classes = model_info['classes']['names']
+                self.device = 'cpu'
+                has_cuda = torch.cuda.is_available()
+                self.msg_if.pub_warn("CUDA available: " + str(has_cuda))
+                if has_cuda == True:
+                    cuda_count = torch.cuda.device_count()
+                    self.msg_if.pub_warn("CUDA GPU Count: " + str(cuda_count))
+                    if cuda_count > 0:
+                        self.device = 'cuda'
 
                 self.msg_if.pub_warn("Loading model: " + self.node_name)
-                raw_yolov5_path = r"{}".format(self.yolov5_path)
-                self.model = torch.hub.load(raw_yolov5_path,'custom', path=self.weight_file_path,source='local')
-                
+                self.model = YOLO(self.weight_file_path)
+
+
                 # Initialize Detector with Blank Img
                 self.msg_if.pub_warn("Initializing detector with blank img")
                 init_cv2_img=nepi_img.create_cv2_blank_img()
@@ -158,6 +159,8 @@ class Yolov5Detector():
                 nepi_sdk.spin()
                 #########################################################        
               
+              
+
 
 
     def processDetection(self, cv2_img, img_dict=dict(), threshold = 0.3, resize = False, verbose = False):
@@ -198,7 +201,6 @@ class Yolov5Detector():
                 img_dict['prc_height'] = prc_height 
                 img_dict['ratio'] = rescale_ratio 
                 img_dict['tiling'] = False
-
 
 
                 # Update model settings
