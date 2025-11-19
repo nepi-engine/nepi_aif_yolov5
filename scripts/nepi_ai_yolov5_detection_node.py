@@ -50,7 +50,7 @@ class Yolov5Detector():
     MODEL_FRAMEWORK="yolov5"
 
     def __init__(self):
-       ####  NODE Initialization ####
+        ####  NODE Initialization ####
         nepi_sdk.init_node(name= self.DEFAULT_NODE_NAME)
         self.class_name = type(self).__name__
         self.base_namespace = nepi_sdk.get_base_namespace()
@@ -62,102 +62,124 @@ class Yolov5Detector():
         self.msg_if = MsgIF(log_name = self.class_name)
         self.msg_if.pub_info("Starting Node Initialization Processes")
 
-
-        ##############################  
-        # Import ultralytics here so we can message
-
-
-
-        ##############################  
+       ##############################  
         # Initialize Class Variables
-        node_params = nepi_sdk.get_param("~")
-        self.msg_if.pub_info("Starting node params: " + str(node_params))
+
+        ############  Get ALL_NAMESPACE if provided
         param_namespace = nepi_sdk.create_namespace(self.node_namespace,'all_namespace')
         self.all_namespace = nepi_sdk.get_param(param_namespace,"")
         if self.all_namespace == "":
             self.all_namespace = self.node_namespace
+
+
+        ############  Get WEIGHT_FILE Path
         param_namespace = nepi_sdk.create_namespace(self.node_namespace,'weight_file_path')
-        self.weight_file_path = nepi_sdk.get_param(param_namespace,"")
-        if self.weight_file_path == "":
+        self.weight_file_path = str(nepi_sdk.get_param(param_namespace,""))
+        self.msg_if.pub_warn("Got weight file path: " + self.weight_file_path)
+        if self.weight_file_path == "" or os.path.exists(self.weight_file_path) == False:
             self.msg_if.pub_warn("Failed to get required node info from param server at: " + str(param_namespace))
-            nepi_sdk.signal_shutdown("Failed to get valid model info from param")
+            nepi_sdk.signal_shutdown("Failed to get valid weight path, got: " + self.weight_file_path)
+            return
+
+        ############  Get PARAMS_FILE Path
+        param_namespace = nepi_sdk.create_namespace(self.node_namespace,'param_file_path')
+        self.param_file_path = str(nepi_sdk.get_param(param_namespace,""))
+        self.msg_if.pub_warn("Got param file path: " + self.param_file_path)
+        if self.param_file_path == "" or os.path.exists(self.param_file_path) == False:
+            self.msg_if.pub_warn("Failed to get required node info from param server at: " + str(param_namespace))
+            nepi_sdk.signal_shutdown("Failed to get valid param path, got: " + self.param_file_path)
+            return
+
+        ############### Load Model Params
+        yaml_dict = nepi_utils.read_dict_from_file(self.param_file_path)
+        
+        self.msg_if.pub_warn("Got model info: " + str(yaml_dict))
+
+        if yaml_dict is None:
+            self.msg_if.pub_warn("Failed load model info dict from: " + str(self.param_file_path))
+            nepi_sdk.signal_shutdown("Failed to get valid model info from param: " + str(self.param_file_path))
+            return
         else:
-            # The ai_models param is created by the launch files load network_param_file line
-            param_namespace = nepi_sdk.create_namespace(self.node_namespace,'ai_model')
-            model_info = nepi_sdk.get_param(param_namespace,"")
-            if model_info == "":
-                self.msg_if.pub_warn("Failed to get required model info from params: ")
+            try: 
+                model_info_dict = yaml_dict['ai_model']
+                model_framework = model_info_dict['framework']['name']
+                model_type = model_info_dict['type']['name']
+                model_description = model_info_dict['description']['name']
+                self.classes = model_info_dict['classes']['names']
+                self.proc_img_width = model_info_dict['image_size']['image_width']['value']
+                self.proc_img_height = model_info_dict['image_size']['image_height']['value']
+            except Exception as e:
+                self.msg_if.pub_warn("Failed to get required model info from params: " + str(e))
                 nepi_sdk.signal_shutdown("Failed to get valid model file paths")
-            else:
-                try: 
-                    model_framework = model_info['framework']['name']
-                    model_type = model_info['type']['name']
-                    model_description = model_info['description']['name']
-                    self.classes = model_info['classes']['names']
-                    self.proc_img_width = model_info['image_size']['image_width']['value']
-                    self.proc_img_height = model_info['image_size']['image_height']['value']
-                except Exception as e:
-                    self.msg_if.pub_warn("Failed to get required model info from params: " + str(e))
-                    nepi_sdk.signal_shutdown("Failed to get valid model file paths")
+                return
+            if model_framework != self.MODEL_FRAMEWORK:
+                self.msg_if.pub_warn("Model not a " + self.MODEL_FRAMEWORK  + " model: " + model_framework)
+                nepi_sdk.signal_shutdown("Model not a valid framework")
+                return
 
-                if model_framework != self.MODEL_FRAMEWORK:
-                    self.msg_if.pub_warn("Model not a " + self.MODEL_FRAMEWORK  + " model: " + model_framework)
-                    nepi_sdk.signal_shutdown("Model not a valid framework")
-
-
-                if model_type != 'detection':
-                    self.msg_if.pub_warn("Model not a valid type: " + model_type)
-                    nepi_sdk.signal_shutdown("Model not a valid type")
-
-                self.device = 'cpu'
-                has_cuda = torch.cuda.is_available()
-                self.msg_if.pub_warn("CUDA available: " + str(has_cuda))
-                if has_cuda == True:
-                    cuda_count = torch.cuda.device_count()
-                    self.msg_if.pub_warn("CUDA GPU Count: " + str(cuda_count))
-                    if cuda_count > 0:
-                        self.device = 'cuda'
-
-                self.msg_if.pub_warn("Loading model: " + self.node_name)
-                self.model = YOLO(self.weight_file_path)
+            if model_type != 'detection':
+                self.msg_if.pub_warn("Model not a valid type: " + model_type)
+                nepi_sdk.signal_shutdown("Model not a valid type")
+                return
+            
+            self.device = 'cpu'
+            has_cuda = torch.cuda.is_available()
+            self.msg_if.pub_warn("CUDA available: " + str(has_cuda))
+            if has_cuda == True:
+                cuda_count = torch.cuda.device_count()
+                self.msg_if.pub_warn("CUDA GPU Count: " + str(cuda_count))
+                if cuda_count > 0:
+                    self.device = 'cuda'
 
 
-                # Initialize Detector with Blank Img
-                self.msg_if.pub_warn("Initializing detector with blank img")
-                init_cv2_img=nepi_img.create_cv2_blank_img()
+            ##############################  
+            # Load Model
+
+            raw_yolov5_path = r"{}".format(self.yolov5_path)
+            self.model = torch.hub.load(raw_yolov5_path,'custom', path=self.weight_file_path,source='local')
+
+            ##############################  
+
+
+            # Initialize Detector with Blank Img
+            self.msg_if.pub_warn("Initializing detector with blank img")
+            init_cv2_img=nepi_img.create_cv2_blank_img()
+            det_dict=self.processDetection(init_cv2_img)
+
+            # Run Tests
+            NUM_TESTS=10
+            self.msg_if.pub_warn("Running Detection Speed Test on " + str(NUM_TESTS) + " Images")
+            start_time = time.time()
+            for i in range(1, NUM_TESTS):
                 det_dict=self.processDetection(init_cv2_img)
+            elapsed_time = round( ( time.time() - start_time ) , 3)  # Slower for real images
+            detect_rate = round( float(1.0)/elapsed_time * NUM_TESTS , 2)
+            self.msg_if.pub_warn("Average Detection Time: " + str(elapsed_time) + " sec")
+            self.msg_if.pub_warn("Average Detection Rate: " + str(detect_rate) + " hz")
 
-                # Run Tests
-                NUM_TESTS=10
-                self.msg_if.pub_warn("Running Detection Speed Test on " + str(NUM_TESTS) + " Images")
-                start_time = time.time()
-                for i in range(1, NUM_TESTS):
-                    det_dict=self.processDetection(init_cv2_img)
-                elapsed_time = ( time.time() - start_time )  / 3 # Slower for real images
-                detect_rate = round( float(1.0)/elapsed_time * NUM_TESTS , 2)
-                self.msg_if.pub_warn("Average Detection Rate: " + str(detect_rate) + " hz")
+            # Create API IF Class
+            self.msg_if.pub_info("Starting ai_if with default_config_dict: " + str(self.default_config_dict))
+            self.ai_if = AiDetectorIF(
+                                namespace = self.node_namespace,
+                                model_name = self.node_name,
+                                framework = model_framework,
+                                description = model_description,
+                                proc_img_height = self.proc_img_height,
+                                proc_img_width = self.proc_img_width,
+                                classes_list = self.classes,
+                                default_config_dict = self.default_config_dict,
+                                all_namespace = self.all_namespace,
+                                processDetectionFunction = self.processDetection,
+                                has_img_tiling = False)
 
-                # Create API IF Class
-                self.msg_if.pub_info("Starting ai_if with default_config_dict: " + str(self.default_config_dict))
-                self.ai_if = AiDetectorIF(
-                                    namespace = self.node_namespace,
-                                    model_name = self.node_name,
-                                    framework = model_framework,
-                                    description = model_description,
-                                    proc_img_height = self.proc_img_height,
-                                    proc_img_width = self.proc_img_width,
-                                    classes_list = self.classes,
-                                    default_config_dict = self.default_config_dict,
-                                    all_namespace = self.all_namespace,
-                                    processDetectionFunction = self.processDetection,
-                                    has_img_tiling = False)
+            #########################################################
+            ## Initiation Complete
+            
+   
 
-                #########################################################
-                ## Initiation Complete
-                self.msg_if.pub_info("Initialization Complete")
-                # Spin forever (until object is detected)
-                nepi_sdk.spin()
-                #########################################################        
+            # Spin forever (until object is detected)
+            nepi_sdk.spin()
+            #########################################################              
               
               
 
